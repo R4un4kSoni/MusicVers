@@ -354,6 +354,20 @@ fallbacks.
 Make sure VLC is installed and that `python-vlc` can find it. Check the
 pywebview debug console for stream errors.
 
+**Playback takes a moment to start.**
+JioSaavn serves AAC inside an MP4 container. NeonWave forces VLC's FFmpeg
+demuxer and uses a shorter network cache for these streams, which avoids the
+end-of-file seek that caused long silent pauses. You can compare VLC, the
+optimised VLC path and ffplay yourself:
+
+```bash
+python tools/playback_startup_probe.py --query "Kesariya" --runs 3
+```
+
+The probe prints HTTP time-to-first-byte and time-to-first-audio for each
+player. Use `--aout pulse` to test the real desktop audio output; the default
+is silent.
+
 **Search does not return live results.**
 JioSaavn access needs an internet connection and the unofficial API may
 change. The browser preview will still show the bundled demo catalogue.

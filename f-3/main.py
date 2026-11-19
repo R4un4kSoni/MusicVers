@@ -7,8 +7,15 @@ engine for real playback, search and library persistence, but does not
 touch any of the older frontend folders.
 """
 
+import os
 import sys
 from pathlib import Path
+
+# QtWebEngine 6.12 can abort in its OpenGL texture-cleanup callback with
+# "Failed to restore OpenGL context after clean-up" on Linux/Wayland when the
+# GBM-backed graphics path is used. Prefer the non-GBM path by default; an
+# explicit environment setting still wins for debugging.
+os.environ.setdefault("QTWEBENGINE_FORCE_USE_GBM", "0")
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent

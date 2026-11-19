@@ -1,3 +1,0 @@
-NeonWave desktop music app.
-
-See README.md for features, setup and usage.

@@ -163,8 +163,10 @@ class MusicPlayer:
 
             # A single stop is enough. The old code also stopped the player
             # from _cleanup_download(), which could leave teardown racing the
-            # next play() call.
+            # next play() call. Clearing the old media also stops VLC's
+            # preparser from carrying a stale seek offset into the new stream.
             self.player.stop()
+            self.player.set_media(None)
 
             self._begin_playback(url)
 
@@ -178,6 +180,19 @@ class MusicPlayer:
                 "Chrome/131.0.0.0 Safari/537.36"
             )
             media.add_option(":http-referrer=https://www.jiosaavn.com/")
+
+            # JioSaavn serves AAC inside an MP4 container. VLC's built-in MP4
+            # demuxer tries to seek to the end of the file to locate the moov
+            # atom; some CDN responses reject that seek and VLC then waits for
+            # a long sequential scan before audio starts. FFmpeg's demuxer
+            # handles the same stream progressively (verified with ffplay), so
+            # force it here. The low cache values shorten the startup buffer.
+            media.add_option(":demux=avformat")
+            media.add_option(":network-caching=250")
+            media.add_option(":file-caching=150")
+            media.add_option(":clock-jitter=0")
+            media.add_option(":clock-synchro=0")
+            media.add_option(":http-reconnect")
 
             self.player.set_media(media)
 

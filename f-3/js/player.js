@@ -31,6 +31,7 @@
   let toggleBusy = false;
   let autoAdvanceHandled = false;
   let pauseGraceUntil = 0;
+  let flowOpened = false;
 
   function notify() {
     document.dispatchEvent(new CustomEvent('mv:player', { detail: snapshot() }));
@@ -166,9 +167,11 @@
     state.duration = state.current.duration || 0;
     state.playing = true;
     state.lastTick = Date.now();
+    flowOpened = false;
     // VLC reports "loading" while a stream opens; keep the button in sync
-    // with the user's intent until playback has had time to start.
-    pauseGraceUntil = Date.now() + 1500;
+    // with the user's intent until playback has had time to start. Streams
+    // get a longer grace period because they also need metadata/auth work.
+    pauseGraceUntil = Date.now() + (MV.api.isLive() ? 4000 : 1200);
 
     // Record song in shuffle history (same rule as the old player).
     if (state.shuffle && settings.recordShuffleHistory !== false) {
@@ -201,7 +204,13 @@
       notify();
     }
 
-    if (MV.store.state.profile.flowAuto && MV.ui.openFlow) MV.ui.openFlow();
+    // In browser preview there is no backend progress event, so open Flow
+    // immediately. In live mode we wait for the backend to report "playing"
+    // first; opening the immersive view before audio is ready makes the
+    // startup feel like a pause.
+    if (result && result.simulated && MV.store.state.profile.flowAuto && MV.ui.openFlow) {
+      MV.ui.openFlow();
+    }
   }
 
   async function toggle() {
@@ -405,7 +414,13 @@
         state.elapsed = progress.current;
 
         // Re-arm auto-advance only after the backend reports real playback.
-        if (progress.state === 'playing') autoAdvanceHandled = false;
+        if (progress.state === 'playing') {
+          autoAdvanceHandled = false;
+          if (!flowOpened && MV.store.state.profile.flowAuto && MV.ui.openFlow) {
+            flowOpened = true;
+            MV.ui.openFlow();
+          }
+        }
         // "loading" is normal while a stream opens, so it must not flip the
         // play glyph back. A real pause is also ignored briefly after a resume.
         if (

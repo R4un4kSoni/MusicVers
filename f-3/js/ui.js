@@ -123,7 +123,7 @@
     );
   }
 
-  function readCoverFile(file) {
+  function loadImageFile(file) {
     return new Promise((resolve, reject) => {
       if (!file || !/^image\//.test(file.type)) { reject(new Error('Please choose an image file.')); return; }
       const reader = new FileReader();
@@ -131,23 +131,154 @@
       reader.onload = () => {
         const image = new Image();
         image.onerror = () => reject(new Error('Could not open that image.'));
-        image.onload = () => {
-          const size = 512;
-          const scale = Math.min(size / image.width, size / image.height, 1);
-          const canvas = document.createElement('canvas');
-          canvas.width = canvas.height = size;
-          const ctx = canvas.getContext('2d');
-          const width = image.width * scale;
-          const height = image.height * scale;
-          ctx.fillStyle = '#e8e2d9';
-          ctx.fillRect(0, 0, size, size);
-          ctx.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
-          resolve(canvas.toDataURL('image/jpeg', .86));
-        };
+        image.onload = () => resolve(image);
         image.src = reader.result;
       };
       reader.readAsDataURL(file);
     });
+  }
+
+  function readCoverFile(file) {
+    return loadImageFile(file).then((image) => {
+      const size = 512;
+      const scale = Math.min(size / image.width, size / image.height, 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const width = image.width * scale;
+      const height = image.height * scale;
+      ctx.fillStyle = '#e8e2d9';
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
+      return canvas.toDataURL('image/jpeg', .86);
+    });
+  }
+
+  /* Interactive cropper. The guide shape matches the final artwork:
+     circle for profile pictures, square for playlist covers. */
+  function openImageCropper(image, options) {
+    const opts = options || {};
+    const shape = opts.shape === 'circle' ? 'circle' : 'square';
+    const outputSize = opts.size || 512;
+    const viewport = 280;
+    const baseScale = Math.max(viewport / image.naturalWidth, viewport / image.naturalHeight);
+    let zoom = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startOffsetX = 0;
+    let startOffsetY = 0;
+
+    const cropRoot = document.createElement('div');
+    cropRoot.className = 'cropper-root';
+    cropRoot.innerHTML = '<div class="modal modal--cropper" role="dialog" aria-modal="true">' +
+      '<p class="eyebrow">POSITION YOUR IMAGE</p><h2>' + esc(opts.title || 'Crop image') + '</h2>' +
+      '<p>' + esc(opts.description || 'Drag to reposition, then use the slider to zoom.') + '</p>' +
+      '<div class="cropper-body">' +
+        '<div class="cropper-stage cropper-stage--' + shape + '" id="crop-stage">' +
+          '<img class="cropper-image" id="crop-image" alt="">' +
+          '<div class="cropper-guide" aria-hidden="true"></div>' +
+        '</div>' +
+        '<div class="cropper-side">' +
+          '<div class="cropper-preview cropper-preview--' + shape + '" id="crop-preview" aria-hidden="true"></div>' +
+          '<label class="cropper-zoom-label" for="crop-zoom">Zoom</label>' +
+          '<input class="cropper-zoom" id="crop-zoom" type="range" min="1" max="3" step="0.01" value="1">' +
+          '<small>' + (shape === 'circle'
+            ? 'The circular guide is your final profile picture.'
+            : 'The square guide is your final playlist cover.') + '</small>' +
+        '</div>' +
+      '</div>' +
+      '<div class="modal__actions">' +
+        '<button class="btn btn--outline" data-crop="cancel">Cancel</button>' +
+        '<button class="btn btn--dark" data-crop="done">Use this area</button>' +
+      '</div>' +
+      '</div>';
+    document.body.appendChild(cropRoot);
+    const closeCropper = () => cropRoot.remove();
+    cropRoot.onclick = (event) => { if (event.target === cropRoot) closeCropper(); };
+
+    (() => {
+      const root = cropRoot;
+        const stage = root.querySelector('#crop-stage');
+        const img = root.querySelector('#crop-image');
+        const slider = root.querySelector('#crop-zoom');
+        const preview = root.querySelector('#crop-preview');
+
+        img.src = image.src;
+
+        const displayWidth = () => image.naturalWidth * baseScale * zoom;
+        const displayHeight = () => image.naturalHeight * baseScale * zoom;
+
+        function clampOffsets() {
+          const maxX = Math.max(0, (displayWidth() - viewport) / 2);
+          const maxY = Math.max(0, (displayHeight() - viewport) / 2);
+          offsetX = Math.min(maxX, Math.max(-maxX, offsetX));
+          offsetY = Math.min(maxY, Math.max(-maxY, offsetY));
+        }
+
+        function render() {
+          const width = displayWidth();
+          const height = displayHeight();
+          img.style.width = width + 'px';
+          img.style.height = height + 'px';
+          img.style.left = ((viewport - width) / 2 + offsetX) + 'px';
+          img.style.top = ((viewport - height) / 2 + offsetY) + 'px';
+          preview.style.backgroundImage = 'url("' + image.src + '")';
+          preview.style.backgroundSize = (width / viewport * 100) + '% ' + (height / viewport * 100) + '%';
+          preview.style.backgroundPosition =
+            (50 - offsetX / Math.max(1, width - viewport) * 100) + '% ' +
+            (50 - offsetY / Math.max(1, height - viewport) * 100) + '%';
+        }
+
+        stage.addEventListener('pointerdown', (event) => {
+          dragging = true;
+          startX = event.clientX;
+          startY = event.clientY;
+          startOffsetX = offsetX;
+          startOffsetY = offsetY;
+          if (stage.setPointerCapture) stage.setPointerCapture(event.pointerId);
+        });
+        stage.addEventListener('pointermove', (event) => {
+          if (!dragging) return;
+          offsetX = startOffsetX + (event.clientX - startX);
+          offsetY = startOffsetY + (event.clientY - startY);
+          clampOffsets();
+          render();
+        });
+        const stopDragging = () => { dragging = false; };
+        stage.addEventListener('pointerup', stopDragging);
+        stage.addEventListener('pointercancel', stopDragging);
+        slider.addEventListener('input', () => {
+          zoom = Number(slider.value) || 1;
+          clampOffsets();
+          render();
+        });
+
+        root.querySelector('[data-crop="cancel"]').onclick = closeCropper;
+        root.querySelector('[data-crop="done"]').onclick = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = canvas.height = outputSize;
+          const ctx = canvas.getContext('2d');
+          const ratio = outputSize / viewport;
+          const width = displayWidth();
+          const height = displayHeight();
+          ctx.fillStyle = '#e8e2d9';
+          ctx.fillRect(0, 0, outputSize, outputSize);
+          ctx.drawImage(
+            image,
+            ((viewport - width) / 2 + offsetX) * ratio,
+            ((viewport - height) / 2 + offsetY) * ratio,
+            width * ratio,
+            height * ratio
+          );
+          const dataUrl = canvas.toDataURL('image/jpeg', .9);
+          closeCropper();
+          if (typeof opts.onCrop === 'function') opts.onCrop(dataUrl);
+        };
+        render();
+    })();
   }
 
   function coverPicker(current, callback) {
@@ -157,7 +288,7 @@
     };
     openModal(
       '<p class="eyebrow">COVER ART</p><h2>Choose a cover</h2>' +
-      '<p>Pick an image from your computer. It is resized and kept on this device.</p>' +
+      '<p>Pick an image from your computer, then drag and zoom to frame the exact square you want. It is kept on this device.</p>' +
       '<div class="cover-picker"><div class="cover-picker__preview" id="cover-preview">' +
       (current ? image(current, 'Cover') : '♪') + '</div>' +
       '<div><strong>Playlist artwork</strong><small>JPG or PNG · square works best</small>' +
@@ -441,9 +572,16 @@
     el('results-eyebrow').textContent = result.source === 'online' ? 'LIVE CATALOGUE' : 'LOCAL CATALOGUE';
     el('search-status').textContent = result.songs.length + ' songs · ' + result.artists.length + ' artists · ' + result.albums.length + ' albums';
 
-    el('result-songs').innerHTML = result.songs.length
-      ? result.songs.slice(0, visible).map((song, i) => songRow(song, i)).join('')
-      : '<div class="empty-state"><span class="empty-state__icon">⌕</span><h3>No songs found</h3><p>Try another spelling or artist name.</p></div>';
+    const songs = result.songs.slice(0, visible);
+    const mid = Math.ceil(songs.length / 2);
+    const left = songs.slice(0, mid);
+    const right = songs.slice(mid);
+    const emptySongs = '<div class="empty-state"><span class="empty-state__icon">⌕</span><h3>No songs found</h3><p>Try another spelling or artist name.</p></div>';
+    const songsA = el('result-songs-a');
+    const songsB = el('result-songs-b');
+    if (songsA) songsA.innerHTML = songs.length ? left.map((song, idx) => songRow(song, idx)).join('') : emptySongs;
+    if (songsB) songsB.innerHTML = right.length ? right.map((song, idx) => songRow(song, mid + idx)).join('') : '';
+
     const loadButton = el('load-more-songs');
     if (loadButton) {
       loadButton.hidden = result.songs.length <= visible;
@@ -1011,7 +1149,7 @@
   /* ---------------- navigation ---------------- */
 
   function navigate(page) {
-    const names = { home: 'HOME', library: 'LIBRARY', discover: 'DISCOVER', account: 'ACCOUNT', playlist: 'YOUR PLAYLIST', album: 'ALBUM', artist: 'ARTIST' };
+    const names = { home: 'HOME', library: 'LIBRARY', discover: 'DISCOVER', account: 'ACCOUNT', playlist: 'YOUR PLAYLIST', album: 'ALBUM', artist: 'ARTIST', report: 'REPORT' };
     document.querySelectorAll('.page').forEach((section) =>
       section.classList.toggle('is-active', section.id === 'page-' + page));
     document.querySelectorAll('.island-tab').forEach((tab) =>
@@ -1415,8 +1553,13 @@
       event.target.value = '';
       if (!file || !coverCallback) return;
       try {
-        const dataUrl = await readCoverFile(file);
-        coverCallback(dataUrl);
+        const image = await loadImageFile(file);
+        openImageCropper(image, {
+          title: 'Frame your cover',
+          description: 'Drag the image and zoom until the square guide contains the part you want.',
+          shape: 'square',
+          onCrop: (dataUrl) => coverCallback(dataUrl)
+        });
       } catch (error) {
         toast(error.message || 'Could not use that image.');
       }
@@ -1442,10 +1585,21 @@
       event.target.value = '';
       if (!file) return;
       try {
-        const dataUrl = await readCoverFile(file);
-        await MV.api.setProfilePicture(dataUrl);
-        renderAccount();
-        toast('Profile picture updated.');
+        const image = await loadImageFile(file);
+        openImageCropper(image, {
+          title: 'Frame your profile picture',
+          description: 'Drag the image and zoom until your face sits inside the circular guide.',
+          shape: 'circle',
+          onCrop: async (dataUrl) => {
+            try {
+              await MV.api.setProfilePicture(dataUrl);
+              renderAccount();
+              toast('Profile picture updated.');
+            } catch (error) {
+              toast(error.message || 'Could not save that picture.');
+            }
+          }
+        });
       } catch (error) {
         toast(error.message || 'Could not use that image.');
       }
@@ -1463,6 +1617,70 @@
         MV.store.clearRecentlyPlayed(); renderHome(); toast('History cleared.');
       });
     };
+
+    const reportForm = el('report-form');
+    if (reportForm) {
+      reportForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const name = String((el('report-name') || {}).value || '').trim();
+        const email = String((el('report-email') || {}).value || '').trim();
+        const description = String((el('report-description') || {}).value || '').trim();
+        const error = el('report-error');
+        const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+        if (!email || !emailOk) {
+          if (error) {
+            error.textContent = 'Please enter a valid email address.';
+            error.hidden = false;
+          }
+          const field = el('report-email');
+          if (field) field.focus();
+          return;
+        }
+        if (!description) {
+          if (error) {
+            error.textContent = 'Please describe the issue so we can help.';
+            error.hidden = false;
+          }
+          const field = el('report-description');
+          if (field) field.focus();
+          return;
+        }
+
+        if (error) error.hidden = true;
+        const subject = 'MusicVer report';
+        const body = [
+          'Name: ' + (name || 'Not provided'),
+          'Email: ' + email,
+          '',
+          'Bug description:',
+          description
+        ].join('\n');
+        const mailto = 'mailto:r91128577@gmail.com?subject=' +
+          encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+
+        // Open the user's email client with the report prefilled.
+        window.location.href = mailto;
+
+        reportForm.hidden = true;
+        const thanks = el('report-thanks');
+        if (thanks) thanks.hidden = false;
+      });
+    }
+
+    const reportAnother = el('report-another');
+    if (reportAnother) reportAnother.onclick = () => {
+      const form = el('report-form');
+      if (form) {
+        form.reset();
+        form.hidden = false;
+      }
+      const thanks = el('report-thanks');
+      if (thanks) thanks.hidden = true;
+      const err = el('report-error');
+      if (err) err.hidden = true;
+    };
+
     el('choose-folder').onclick = async () => {
       const result = await MV.api.chooseFolder();
       if (result && result.success) {
@@ -1587,8 +1805,10 @@
     document.body.classList.toggle('no-ambience', !profile.ambience);
     const status = el('backend-status');
     const live = MV.api.isLive();
-    status.textContent = live ? 'ENGINE LIVE' : 'PREVIEW';
-    status.classList.toggle('is-live', live);
+    if (status) {
+      status.textContent = live ? 'ENGINE LIVE' : 'PREVIEW';
+      status.classList.toggle('is-live', live);
+    }
     el('account-status').textContent = live
       ? 'Connected to the local music engine. Everything is stored on this device.'
       : 'Preview mode · open f-3/main.py for real playback and library sync.';
@@ -1640,6 +1860,6 @@
     navigate, setLibraryTab, openPlaylist, openAlbum, renderAlbum, openArtist, openFlow, closeFlow,
     openQueue, closeQueue, toggleQueue, applyTheme, setThemeWithAnimation, toggleTheme,
     openCreatePlaylist, songMenu, addToPlaylistModal, coverPicker,
-    runSearch, setHero, toast, readCoverFile, fmt, esc
+    runSearch, setHero, toast, loadImageFile, readCoverFile, openImageCropper, fmt, esc
   };
 })(window.MV = window.MV || {});

@@ -1,4 +1,11 @@
 import os
+
+# QtWebEngine 6.12 can abort in its OpenGL texture-cleanup callback with
+# "Failed to restore OpenGL context after clean-up" on Linux/Wayland when the
+# GBM-backed graphics path is used. Prefer the non-GBM path by default; an
+# explicit environment setting still wins for debugging.
+os.environ.setdefault("QTWEBENGINE_FORCE_USE_GBM", "0")
+
 import webview
 from pathlib import Path
 
