@@ -76,6 +76,28 @@ class YouTubeProvider(BaseMusicProvider):
                     "provider": "youtube"
                 })
 
+            # Prefer audio-friendly uploads. Auto-generated "Topic" tracks and
+            # official audio uploads are usually embeddable and work well for
+            # listening, even when the official video blocks embedding.
+            def score(track):
+                title = str(track.get("title") or "").lower()
+                channel = str(track.get("artist") or "").lower()
+
+                value = 0
+
+                if "official audio" in title or "audio" in title:
+                    value += 4
+                if channel.endswith("- topic"):
+                    value += 3
+                if "vevo" in channel or "official" in channel:
+                    value += 2
+                if "lyrics" in title or "lyric" in title:
+                    value += 1
+
+                return value
+
+            results.sort(key=score, reverse=True)
+
             return {
                 "success": True,
                 "results": results,

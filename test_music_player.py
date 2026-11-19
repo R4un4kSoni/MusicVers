@@ -1,7 +1,7 @@
 import os
 import unittest
 from unittest.mock import Mock, patch
-
+import vlc
 from backend.player import MusicPlayer
 
 
@@ -15,7 +15,13 @@ class TestMusicPlayer(unittest.TestCase):
         self.mock_instance = Mock()
         self.mock_player = Mock()
 
-        self.mock_instance.media_player_new.return_value = self.mock_player
+        self.mock_video_player = Mock()
+        self.mock_video_player.get_time.return_value = 0
+        self.mock_video_player.get_length.return_value = 0
+        self.mock_instance.media_player_new.side_effect = [
+            self.mock_player,
+            self.mock_video_player
+        ]
         self.mock_player.play.return_value = 0
         self.mock_player.get_state.return_value = "Playing"
         self.mock_instance_class.return_value = self.mock_instance
@@ -32,7 +38,8 @@ class TestMusicPlayer(unittest.TestCase):
 
         self.assertTrue(result["success"])
         self.assertEqual(self.player.current_song, "/music/test.mp3")
-        self.assertTrue(self.player.is_playing)
+        self.assertEqual(self.player.playback_state, "loading")
+        self.assertFalse(self.player.is_playing)
         self.assertFalse(self.player.is_paused)
 
         self.mock_player.play.assert_called_once()
@@ -78,6 +85,7 @@ class TestMusicPlayer(unittest.TestCase):
         self.player.current_song = "/tmp/test.mp3"
         self.player.is_playing = True
         self.player.playback_state = "playing"
+        self.player._reached_playing = True
 
         self.mock_player.get_state.return_value = "Ended"
         self.mock_player.get_time.return_value = 60000
@@ -85,9 +93,11 @@ class TestMusicPlayer(unittest.TestCase):
 
         result = self.player.get_progress()
 
-        mock_loader.cleanup.assert_called_once()
+        # Progress polling must not tear down downloads; that is handled by
+        # stop()/play() to avoid racing the next playback request.
+        mock_loader.cleanup.assert_not_called()
 
-        self.assertIsNone(self.player.download_service.loader)
+        self.assertIsNotNone(self.player.download_service.loader)
         self.assertIsNone(self.player.current_song)
         self.assertFalse(self.player.is_playing)
         self.assertFalse(self.player.is_paused)
@@ -101,6 +111,7 @@ class TestMusicPlayer(unittest.TestCase):
         self.player.current_song = "/music/local.mp3"
         self.player.playback_state = "playing"
         self.player.is_playing = True
+        self.player._reached_playing = True
 
         self.mock_player.get_state.return_value = "Ended"
         self.mock_player.get_time.return_value = 120000
@@ -144,6 +155,7 @@ class TestMusicPlayer(unittest.TestCase):
         self.player.current_song = "/music/test.mp3"
         self.player.is_playing = True
         self.player.playback_state = "playing"
+        self.player._reached_playing = True
 
         self.mock_player.get_state.return_value = "Stopped"
         self.mock_player.get_time.return_value = 0
@@ -228,7 +240,8 @@ class TestMusicPlayer(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(result["chunk_count"], 3)
         self.assertEqual(self.player.current_song, "/tmp/test.mp3")
-        self.assertTrue(self.player.is_playing)
+        self.assertEqual(self.player.playback_state, "loading")
+        self.assertFalse(self.player.is_playing)
 
     def test_download_failure(self):
 
@@ -368,8 +381,192 @@ class TestMusicPlayer(unittest.TestCase):
             with self.subTest(value=value):
                 self.assertFalse(self.player.set_volume(value))
 
-    
+    def test_successful_downloaded_video_playback(self):
 
+        self.player.video_handle = 12345
+
+        self.player.download_service.download = Mock(
+            return_value={
+                "success": True,
+                "file_path": "/tmp/test.mp4",
+                "chunk_count": 5
+            }
+        )
+
+        with patch("backend.player.os.path.isfile", return_value=True):
+            result = self.player.play_downloaded_video(Mock())
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["chunk_count"], 5)
+        self.assertEqual(self.player.current_video, "/tmp/test.mp4")
+        self.assertEqual(self.player.video_playback_state, "playing")
+
+        self.assertEqual(
+        self.mock_video_player.set_media.call_count,
+        2
+    )
+
+        self.assertIsNone(
+            self.mock_video_player.set_media.call_args_list[0].args[0]
+        )
+
+        self.assertIsNotNone(
+            self.mock_video_player.set_media.call_args_list[1].args[0]
+        )
+        self.mock_video_player.play.assert_called_once()
+
+    def test_video_playback_without_video_surface(self):
+
+        self.player.download_service.download = Mock()
+
+        result = self.player.play_downloaded_video(Mock())
+
+        self.assertFalse(result["success"])
+        self.assertEqual(
+            result["message"],
+            "Video surface is not initialized."
+        )
+
+        self.player.download_service.download.assert_not_called()
+        self.mock_video_player.play.assert_not_called()
+
+    def test_video_download_failure(self):
+
+        self.player.video_handle = 12345
+
+        self.player.download_service.download = Mock(
+            return_value={
+                "success": False,
+                "error": "Network error"
+            }
+        )
+
+        result = self.player.play_downloaded_video(Mock())
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["message"], "Network error")
+
+        self.mock_video_player.play.assert_not_called()
+        self.assertIsNone(self.player.current_video)
+
+    def test_video_vlc_playback_failure(self):
+
+        self.player.video_handle = 12345
+
+        self.player.download_service.download = Mock(
+            return_value={
+                "success": True,
+                "file_path": "/tmp/test.mp4",
+                "chunk_count": 5
+            }
+        )
+
+        self.mock_video_player.play.return_value = -1
+
+        with patch("backend.player.os.path.isfile", return_value=True):
+            result = self.player.play_downloaded_video(Mock())
+
+        self.assertFalse(result["success"])
+        self.assertEqual(
+            result["message"],
+            "VLC could not start video playback."
+        )
+
+        self.assertIsNone(self.player.current_video)
+        self.assertEqual(self.player.video_playback_state, "error")
+        self.assertIsNone(self.player.download_service.loader)
+
+
+    @patch("backend.player.os.path.isfile", return_value=True)
+    def test_switching_from_video_to_audio(self, mock_isfile):
+
+        self.player.current_video = "/tmp/test.mp4"
+        self.player.video_playback_state = "playing"
+
+        result = self.player.play("/music/test.mp3")
+
+        self.assertTrue(result["success"])
+
+        self.mock_video_player.stop.assert_called()
+        self.mock_video_player.set_media.assert_called_with(None)
+
+        self.assertIsNone(self.player.current_video)
+        self.assertEqual(self.player.video_playback_state, "stopped")
+
+        self.assertEqual(self.player.current_song, "/music/test.mp3")
+        self.assertEqual(self.player.playback_state, "loading")
+        self.assertFalse(self.player.is_playing)
+
+    
+    def test_video_progress_playing(self):
+
+        self.player.current_video = "/tmp/test.mp4"
+        self.mock_video_player.get_state.return_value = vlc.State.Playing
+        self.mock_video_player.get_time.return_value = 5000
+        self.mock_video_player.get_length.return_value = 120000
+
+        result = self.player.get_video_progress()
+
+        self.assertEqual(result["current_time"], 5)
+        self.assertEqual(result["total_time"], 120)
+        self.assertEqual(result["playback_state"], "playing")
+
+
+    def test_video_progress_ended(self):
+
+        self.player.current_video = "/tmp/test.mp4"
+        self.mock_video_player.get_state.return_value = vlc.State.Ended
+
+        with patch.object(
+            self.player.download_service,
+            "cleanup"
+        ) as mock_cleanup:
+
+            result = self.player.get_video_progress()
+
+            mock_cleanup.assert_called_once()
+
+        self.assertIsNone(self.player.current_video)
+        self.assertEqual(result["playback_state"], "ended")
+
+
+    def test_video_progress_error(self):
+
+        self.player.current_video = "/tmp/test.mp4"
+        self.mock_video_player.get_state.return_value = vlc.State.Error
+
+        with patch.object(
+            self.player.download_service,
+            "cleanup"
+        ) as mock_cleanup:
+
+            result = self.player.get_video_progress()
+
+            mock_cleanup.assert_called_once()
+
+        self.assertIsNone(self.player.current_video)
+        self.assertEqual(result["playback_state"], "error")
+
+
+
+    def test_video_progress_paused(self):
+
+        self.player.current_video = "/tmp/test.mp4"
+        self.mock_video_player.get_state.return_value = vlc.State.Paused
+
+        result = self.player.get_video_progress()
+
+        self.assertEqual(result["playback_state"], "paused")
+
+
+    def test_video_progress_without_active_video(self):
+
+        self.player.current_video = None
+        self.player.video_playback_state = "stopped"
+
+        result = self.player.get_video_progress()
+
+        self.assertEqual(result["playback_state"], "stopped")
 
 if __name__ == "__main__":
     unittest.main()

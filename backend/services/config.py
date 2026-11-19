@@ -15,6 +15,11 @@ class Settings:
 
     YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
     VIDKRAKEN_API_KEY = os.getenv("VIDKRAKEN_API_KEY")
+    JIOSAAVN_API_BASE = os.getenv(
+        "JIOSAAVN_API_BASE",
+        "https://saavn.sumit.co/api",
+    )
+    MUSIC_FOLDER = os.getenv("MUSIC_FOLDER", str(Path.home() / "Music"))
 
 
 settings = Settings()

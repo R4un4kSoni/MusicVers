@@ -57,6 +57,27 @@ def create_tables():
                 ADD COLUMN background_preset INTEGER NOT NULL DEFAULT 0
             """)
 
+        # MIGRATION: STORE A USER-CHOSEN COVER FOR EACH PLAYLIST
+        if "cover" not in columns:
+            cursor.execute("""
+                ALTER TABLE playlists
+                ADD COLUMN cover TEXT
+            """)
+
+        # SAVED ALBUMS (the down-arrow button on an album)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS saved_albums (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                album_key TEXT NOT NULL UNIQUE,
+                title TEXT NOT NULL,
+                artist TEXT,
+                cover TEXT,
+                year TEXT,
+                language TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
         # PLAYLIST SONGS TABLE
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS playlist_songs (

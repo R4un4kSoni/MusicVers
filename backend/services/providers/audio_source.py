@@ -14,3 +14,4 @@ class AudioSource:
     # Permission information
     authorization_type: Optional[str] = None
     authorization_reference: Optional[str] = None
+    media_type: str = "audio"

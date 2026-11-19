@@ -2,7 +2,7 @@ from backend.database import get_connection
 import random
 
 
-def create_playlist(name):
+def create_playlist(name, cover=None):
     name = name.strip()
 
     if not name:
@@ -14,9 +14,9 @@ def create_playlist(name):
     cursor = connection.cursor()
 
     cursor.execute("""
-        INSERT INTO playlists (name, background_preset)
-        VALUES (?, ?)
-    """, (name, background_preset))
+        INSERT INTO playlists (name, background_preset, cover)
+        VALUES (?, ?, ?)
+    """, (name, background_preset, cover or None))
 
     playlist_id = cursor.lastrowid
 
@@ -37,6 +37,7 @@ def get_all_playlists():
                 playlists.id,
                 playlists.name,
                 playlists.background_preset,
+                playlists.cover,
                 COUNT(playlist_songs.song_id) AS song_count
             FROM playlists
             LEFT JOIN playlist_songs

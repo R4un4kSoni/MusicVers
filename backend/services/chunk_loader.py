@@ -11,7 +11,18 @@ import requests
 
 class ChunkLoader:
     MAX_REDIRECTS = 5
-    MAX_DOWNLOAD_SIZE = 250 * 1024 * 1024  # 250 MB
+    MAX_DOWNLOAD_SIZE = 250 * 1024 * 1024  # Legacy audio limit
+
+    MEDIA_PROFILES = {
+        "audio": {
+            "max_size": 250 * 1024 * 1024,
+            "mime_prefix": "audio/",
+        },
+        "video": {
+            "max_size": 2 * 1024 * 1024 * 1024,
+            "mime_prefix": "video/",
+        },
+    }
 
     SENSITIVE_HEADERS = {
         "authorization",
@@ -59,7 +70,8 @@ class ChunkLoader:
         self,
         audio_url,
         chunk_size=1024 * 1024,
-        headers=None
+        headers=None,
+        media_type="audio"
     ):
         if not isinstance(audio_url, str):
             raise ValueError("A valid HTTPS audio URL is required.")
@@ -77,7 +89,10 @@ class ChunkLoader:
         self._validate_public_host(parsed_url.hostname)
 
         try:
-            valid_port = parsed_url.port is None or 1 <= parsed_url.port <= 65535
+            valid_port = (
+                parsed_url.port is None
+                or 1 <= parsed_url.port <= 65535
+            )
         except ValueError:
             valid_port = False
 
@@ -95,6 +110,12 @@ class ChunkLoader:
 
         if headers is not None and not isinstance(headers, dict):
             raise ValueError("Headers must be a dictionary.")
+
+        if media_type not in self.MEDIA_PROFILES:
+            raise ValueError("Unsupported media type.")
+
+        self.media_type = media_type
+        self.media_profile = self.MEDIA_PROFILES[media_type]
 
         self.audio_url = audio_url
         self.chunk_size = chunk_size
@@ -155,9 +176,12 @@ class ChunkLoader:
 
             if self.total_size <= 0:
                 raise RuntimeError("Audio file is empty.")
-            if self.total_size > self.MAX_DOWNLOAD_SIZE:
+            if self.total_size > self.media_profile["max_size"]:
+                max_size_mb = self.media_profile["max_size"] // (1024 * 1024)
+
                 raise RuntimeError(
-                    "Audio file exceeds the maximum allowed size of 250 MB."
+                    f"{self.media_type.capitalize()} file exceeds "
+                    f"the maximum allowed size of {max_size_mb} MB."
                 )
 
             self.chunk_count = math.ceil(
@@ -275,19 +299,18 @@ class ChunkLoader:
 
         if final_url.scheme != "https" or not final_url.netloc:
             raise RuntimeError(
-                "Audio source redirected to an invalid URL."
+                f"{self.media_type.capitalize()} source redirected to an invalid URL."
             )
 
         content_type = response.headers.get(
             "Content-Type", ""
         ).split(";")[0].lower()
 
-        if (
-            not content_type.startswith("audio/")
-            and content_type != "application/octet-stream"
-        ):
+        expected_prefix = self.media_profile["mime_prefix"]
+
+        if not content_type.startswith(expected_prefix):
             raise RuntimeError(
-                f"Invalid audio response type: {content_type}"
+                f"Invalid {self.media_type} response type: {content_type}"
             )
 
         return content_type
@@ -295,16 +318,35 @@ class ChunkLoader:
     def get_file_extension(self):
         """Determine a useful extension for VLC."""
 
-        extensions = {
-            "audio/mpeg": ".mp3",
-            "audio/mp4": ".m4a",
-            "audio/aac": ".aac",
-            "audio/ogg": ".ogg",
-            "audio/flac": ".flac",
-            "audio/wav": ".wav",
-            "audio/x-wav": ".wav",
-            "audio/webm": ".webm"
-        }
+        if self.media_type == "audio":
+            extensions = {
+                "audio/mpeg": ".mp3",
+                "audio/mp4": ".m4a",
+                "audio/aac": ".aac",
+                "audio/ogg": ".ogg",
+                "audio/flac": ".flac",
+                "audio/wav": ".wav",
+                "audio/x-wav": ".wav",
+                "audio/webm": ".webm"
+            }
+
+            allowed = {
+                ".mp3", ".m4a", ".aac", ".ogg",
+                ".flac", ".wav", ".webm"
+            }
+
+        else:
+            extensions = {
+                "video/mp4": ".mp4",
+                "video/webm": ".webm",
+                "video/x-matroska": ".mkv",
+                "video/quicktime": ".mov",
+                "video/x-msvideo": ".avi"
+            }
+
+            allowed = {
+                ".mp4", ".webm", ".mkv", ".mov", ".avi"
+            }
 
         if self.content_type in extensions:
             return extensions[self.content_type]
@@ -313,15 +355,10 @@ class ChunkLoader:
             urlparse(self.audio_url).path
         ).suffix.lower()
 
-        allowed = {
-            ".mp3", ".m4a", ".aac", ".ogg",
-            ".flac", ".wav", ".webm"
-        }
-
         if url_extension in allowed:
             return url_extension
 
-        return ".audio"
+        return ".audio" if self.media_type == "audio" else ".video"
 
     def download_chunk(self, index):
         """Download one verified chunk, retrying temporary failures."""
@@ -408,7 +445,7 @@ class ChunkLoader:
                                 "Received more data than expected."
                             )
 
-                        if received > self.MAX_DOWNLOAD_SIZE:
+                        if received > self.media_profile["max_size"]:
                             raise RuntimeError(
                                 "Audio download exceeds the 250 MB limit."
                             )
@@ -457,8 +494,10 @@ class ChunkLoader:
 
             extension = self.get_file_extension()
 
-            output_part = self.temp_dir / f"audio{extension}.part"
-            output_file = self.temp_dir / f"audio{extension}"
+            output_name = self.media_type
+
+            output_part = self.temp_dir / f"{output_name}{extension}.part"
+            output_file = self.temp_dir / f"{output_name}{extension}"
 
             with open(output_part, "wb") as output:
 
@@ -485,7 +524,7 @@ class ChunkLoader:
 
             if output_part.stat().st_size != self.total_size:
                 raise RuntimeError(
-                    "Final audio file size does not match source."
+                    f"Final {self.media_type} file size does not match source."
                 )
 
             output_part.replace(output_file)

@@ -1,5 +1,5 @@
 from backend.services.chunk_loader import ChunkLoader
-from backend.services.audio_validator import validate_audio_source
+from backend.services.media_validator import validate_media_source
 
 
 class DownloadService:
@@ -8,7 +8,7 @@ class DownloadService:
         self.loader = None
 
     def download(self, source):
-        """Validate an authorized source and download it in chunks."""
+        """Validate an authorized media source and download it in chunks."""
 
         if self.loader is not None:
             return {
@@ -16,7 +16,7 @@ class DownloadService:
                 "error": "A previous download is still active."
             }
 
-        valid, message = validate_audio_source(source)
+        valid, message = validate_media_source(source)
 
         if not valid:
             return {
@@ -29,7 +29,8 @@ class DownloadService:
         try:
             loader = ChunkLoader(
                 audio_url=source.url,
-                headers=source.headers
+                headers=source.headers,
+                media_type=getattr(source, "media_type", "audio")
             )
 
             result = loader.download_to_file()

@@ -17,6 +17,7 @@ __pycache__/
 
 data/*.db
 data/*.db-*
+data/app_settings.json
 data/cache/
 data/temp/
 
@@ -39,3 +40,9 @@ dist/
 
 node_modules/
 npm-debug.log*
+
+
+# Alternative frontends kept locally.
+# frontend/ is already tracked, so this line only ignores new untracked files in it.
+/frontend_v2/
+/frontend/

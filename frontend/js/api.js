@@ -39,3 +39,58 @@ async function getVidKrakenStatus() {
         };
     }
 }
+
+async function startVidKrakenDownload(url, format = "audio") {
+    try {
+        if (!window.pywebview?.api) {
+            throw new Error("Python backend is not ready.");
+        }
+
+        const response =
+            await window.pywebview.api.start_vidkraken_download(
+                url,
+                format
+            );
+
+        if (!response || typeof response.success !== "boolean") {
+            throw new Error("Invalid VidKraken download response.");
+        }
+
+        return response;
+
+    } catch (error) {
+        console.error("VidKraken download error:", error);
+
+        return {
+            success: false,
+            error: error.message || "Could not start download."
+        };
+    }
+}
+
+async function getVidKrakenDownloadStatus(jobId) {
+    try {
+        if (!window.pywebview?.api) {
+            throw new Error("Python backend is not ready.");
+        }
+
+        const response =
+            await window.pywebview.api.get_vidkraken_download_status(
+                jobId
+            );
+
+        if (!response || typeof response.success !== "boolean") {
+            throw new Error("Invalid download status response.");
+        }
+
+        return response;
+
+    } catch (error) {
+        console.error("VidKraken download status error:", error);
+
+        return {
+            success: false,
+            error: error.message || "Could not retrieve download status."
+        };
+    }
+}

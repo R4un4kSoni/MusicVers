@@ -11,7 +11,7 @@ def normalize_track(track, provider_name=None):
 
     provider = track.get("provider") or provider_name or "unknown"
 
-    return {
+    normalized = {
         "id": str(track_id),
         "title": str(title),
         "artist": track.get("artist") or "Unknown Artist",
@@ -20,6 +20,13 @@ def normalize_track(track, provider_name=None):
         "duration": track.get("duration"),
         "provider": str(provider)
     }
+
+    # Optional metadata used by richer providers such as JioSaavn.
+    for field in ("language", "year", "source_url", "quality", "stream_url"):
+        if field in track:
+            normalized[field] = track[field]
+
+    return normalized
 
 
 def normalize_search_response(response, provider_name=None):
