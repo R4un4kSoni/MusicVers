@@ -37,6 +37,7 @@ Thumbs.db
 build/
 dist/
 *.spec
+!packaging/windows/musicver.spec
 
 node_modules/
 npm-debug.log*

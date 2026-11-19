@@ -1,20 +1,27 @@
 import os
+import sys
 
 # QtWebEngine 6.12 can abort in its OpenGL texture-cleanup callback with
 # "Failed to restore OpenGL context after clean-up" on Linux/Wayland when the
 # GBM-backed graphics path is used. Prefer the non-GBM path by default; an
 # explicit environment setting still wins for debugging.
-os.environ.setdefault("QTWEBENGINE_FORCE_USE_GBM", "0")
+if sys.platform.startswith("linux"):
+    os.environ.setdefault("QTWEBENGINE_FORCE_USE_GBM", "0")
+
+# pywebview reaches Qt through qtpy. Force PySide6 so the frozen build ships
+# exactly one Qt stack.
+os.environ.setdefault("QT_API", "pyside6")
 
 import webview
-from pathlib import Path
 
+from backend.app_paths import BUNDLE_DIR, WEBVIEW_STORAGE, ensure_dirs
 from backend.api import NeonWaveAPI
 from backend.settings_store import get_theme
 from backend.video_host import VideoHostBridge
 
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = BUNDLE_DIR
+ensure_dirs()
 
 # musicVer (f-3) is the default. Set NEONWAVE_UI=old/v1/v2 to launch one of
 # the earlier interfaces instead. Nothing is deleted or overwritten.
@@ -42,7 +49,7 @@ def main():
     bridge.api = api
 
     window = webview.create_window(
-        title="Audio",
+        title="MusicVer",
         url=URL,
         width=1280,
         height=840,
@@ -57,8 +64,10 @@ def main():
 
     webview.start(
         gui="qt",
-        debug=True,
-        http_server=True
+        debug=bool(os.environ.get("MUSICVER_DEBUG")),
+        http_server=True,
+        storage_path=str(WEBVIEW_STORAGE),
+        private_mode=False,
     )
 
 

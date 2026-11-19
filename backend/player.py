@@ -1,6 +1,7 @@
 import vlc
 import os
 import math
+import sys
 import time
 from backend.services.download_service import DownloadService
 
@@ -8,7 +9,15 @@ from backend.services.download_service import DownloadService
 class MusicPlayer:
 
     def __init__(self):
-        self.instance = vlc.Instance('--aout=pulse')
+        # Linux needed an explicit PulseAudio module; Windows and macOS should
+        # let VLC choose its native output (WASAPI / CoreAudio) automatically.
+        if sys.platform.startswith("linux"):
+            vlc_args = ["--aout=pulse"]
+        elif sys.platform == "darwin":
+            vlc_args = ["--aout=coreaudio"]
+        else:
+            vlc_args = []
+        self.instance = vlc.Instance(*vlc_args)
         self.player = self.instance.media_player_new()
         self.video_player = self.instance.media_player_new()
         self.video_handle = None

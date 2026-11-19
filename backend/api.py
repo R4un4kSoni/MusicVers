@@ -62,7 +62,7 @@ class NeonWaveAPI:
         self.music_service.set_provider(self.jiosaavn.name)
 
         self.vidkraken = VidKrakenClient()
-        self.permanent_download_service = PermanentDownloadService()
+        self.permanent_download_service = PermanentDownloadService(get_music_folder())
         # Tracks jobs started during this application session.
         self._vidkraken_jobs = {}
         self._youtube_metadata = {}

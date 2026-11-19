@@ -4,12 +4,11 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-from backend.services.config import PROJECT_ROOT
-
-SETTINGS_PATH = PROJECT_ROOT / "data" / "app_settings.json"
+from backend.app_paths import SETTINGS_PATH
+from backend.services.config import settings
 
 DEFAULT_SETTINGS: Dict[str, Any] = {
-    "music_folder": str(Path.home() / "Music"),
+    "music_folder": settings.MUSIC_FOLDER,
     "theme": "light",
     "profile_picture": "",
 }

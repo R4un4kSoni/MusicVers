@@ -1,11 +1,7 @@
 
 import sqlite3
-from pathlib import Path
 
-
-# DATABASE LOCATION
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATABASE_PATH = BASE_DIR / "data" / "neonwave.db"
+from backend.app_paths import DB_PATH as DATABASE_PATH
 
 
 # DATABASE CONNECTION
@@ -96,13 +92,6 @@ def create_tables():
         """)
 
         connection.commit()
-
-        # DEBUG: CHECK PLAYLIST COLUMNS
-        cursor.execute("PRAGMA table_info(playlists)")
-        columns = [column["name"] for column in cursor.fetchall()]
-
-        print("DATABASE PATH:", DATABASE_PATH)
-        print("PLAYLIST COLUMNS:", columns)
 
     except Exception:
         connection.rollback()

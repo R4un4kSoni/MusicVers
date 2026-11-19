@@ -15,13 +15,27 @@ from pathlib import Path
 # "Failed to restore OpenGL context after clean-up" on Linux/Wayland when the
 # GBM-backed graphics path is used. Prefer the non-GBM path by default; an
 # explicit environment setting still wins for debugging.
-os.environ.setdefault("QTWEBENGINE_FORCE_USE_GBM", "0")
+if sys.platform.startswith("linux"):
+    os.environ.setdefault("QTWEBENGINE_FORCE_USE_GBM", "0")
 
-HERE = Path(__file__).resolve().parent
-ROOT = HERE.parent
+# pywebview reaches Qt through qtpy. Force PySide6 so the frozen build ships
+# exactly one Qt stack.
+os.environ.setdefault("QT_API", "pyside6")
 
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+IS_FROZEN = bool(getattr(sys, "frozen", False))
+
+if not IS_FROZEN:
+    ROOT = Path(__file__).resolve().parent.parent
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
+from backend.app_paths import (  # noqa: E402
+    BUNDLE_DIR,
+    WEBVIEW_STORAGE,
+    ensure_dirs,
+)
+
+HERE = BUNDLE_DIR / "f-3" if IS_FROZEN else Path(__file__).resolve().parent
 
 import webview  # noqa: E402
 
@@ -29,6 +43,7 @@ from backend.api import NeonWaveAPI  # noqa: E402
 from backend.settings_store import get_theme  # noqa: E402
 from backend.video_host import VideoHostBridge  # noqa: E402
 
+ensure_dirs()
 
 HTML_FILE = HERE / "index.html"
 WINDOW_BG = "#121317" if get_theme() == "dark" else "#f7f5f1"
@@ -53,8 +68,10 @@ def main():
 
     webview.start(
         gui="qt",
-        debug=True,
+        debug=bool(os.environ.get("MUSICVER_DEBUG")),
         http_server=True,
+        storage_path=str(WEBVIEW_STORAGE),
+        private_mode=False,
     )
 
 

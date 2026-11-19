@@ -8,6 +8,8 @@ import ipaddress
 import socket
 import requests
 
+from backend.app_paths import TEMP_DIR
+
 
 class ChunkLoader:
     MAX_REDIRECTS = 5
@@ -126,7 +128,7 @@ class ChunkLoader:
         self.chunk_count = None
 
         self.temp_dir = Path(
-            tempfile.mkdtemp(prefix="neonwave_")
+            tempfile.mkdtemp(prefix="neonwave_", dir=TEMP_DIR)
         )
 
         self.session = requests.Session()

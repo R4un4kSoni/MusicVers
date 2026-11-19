@@ -1,0 +1,6 @@
+# Build-only dependencies for the Windows .exe.
+# Install with: python -m pip install -r requirements-build.txt
+-r requirements.txt
+
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.10

@@ -10,11 +10,16 @@ musicVer combines JioSaavn streaming, a local music library, playlists, saved
 albums, artist/album discovery, a glass player and a persistent light/dark
 theme in one small desktop app.
 
+> **Looking for the Windows app?** Download the ready-to-run **v1.0.0** build
+> from [GitHub Releases](https://github.com/R4un4kSoni/MusicVers/releases).
+> See the [Windows guide](docs/WINDOWS-GUIDE.md) for setup and troubleshooting.
+
 ---
 
 ## Contents
 
 - [Screenshots](#screenshots)
+- [Download the Windows app](#download-the-windows-app)
 - [Quick start](#quick-start)
 - [Launch options](#launch-options)
 - [Features](#features)
@@ -30,6 +35,7 @@ theme in one small desktop app.
   - [Dark mode and motion](#dark-mode-and-motion)
   - [Audio sources](#audio-sources)
 - [How it is wired](#how-it-is-wired)
+- [Building the Windows release](#building-the-windows-release)
 - [Project layout](#project-layout)
 - [Data and privacy notes](#data-and-privacy-notes)
 - [Troubleshooting](#troubleshooting)
@@ -63,6 +69,22 @@ contain only the bundled demo catalogue and no personal library data.
     <td align="center"></td>
   </tr>
 </table>
+
+---
+
+## Download the Windows app
+
+The prebuilt **v1.0.0** Windows release is on
+[GitHub Releases](https://github.com/R4un4kSoni/MusicVers/releases):
+
+- `MusicVer.exe` — single-file app, 64-bit Windows.
+- `MusicVer-v1.0.0-windows.zip` — app + guide + dependency list.
+
+You do not need Python to use either file. Install **64-bit VLC** first for
+audio, then double-click the exe. A first-run SmartScreen warning is expected
+because the build is not code-signed.
+
+Full instructions: [docs/WINDOWS-GUIDE.md](docs/WINDOWS-GUIDE.md).
 
 ---
 
@@ -298,6 +320,19 @@ fallbacks.
 
 ---
 
+## Building the Windows release
+
+Everything needed to reproduce the downloadable app is in the repository:
+
+- `requirements.txt` — pinned runtime packages.
+- `requirements-build.txt` — PyInstaller and hooks.
+- `packaging/windows/musicver.spec` — onefile/windowed build recipe.
+- `packaging/windows/build.bat` — one-click local build on Windows.
+
+See [docs/BUILD-WINDOWS.md](docs/BUILD-WINDOWS.md).
+
+---
+
 ## Project layout
 
 ```text
@@ -324,18 +359,26 @@ fallbacks.
 │   │   ├── ui.js                 rendering and interactions
 │   │   └── app.js                bootstrap
 │   └── main.py                   standalone launcher
-├── docs/screenshots/             images used in this README
+├── docs/
+│   ├── screenshots/              images used in this README
+│   ├── WINDOWS-GUIDE.md          how to install/use the Windows build
+│   ├── BUILD-WINDOWS.md          how to reproduce the release build
+│   └── THIRD-PARTY-NOTICES.md    bundled package licences
+├── packaging/windows/            Windows build recipe, icon and build.bat
 ├── frontend/                     original interface (preserved)
 ├── frontend_v2/                  earlier interface (preserved)
-└── requirements.txt              Python dependencies
+├── requirements.txt              pinned runtime dependencies
+└── requirements-build.txt        pinned build-only dependencies
 ```
 
 ---
 
 ## Data and privacy notes
 
-- `data/neonwave.db` and `data/app_settings.json` are generated locally and
-  are intentionally not committed.
+- When run from source, settings and library data live in `data/`. The
+  packaged Windows app instead uses `%APPDATA%\MusicVer\` so user data is never
+  written into the application folder. The repository's `data/neonwave.db` is
+  only a development snapshot.
 - Streaming uses JioSaavn's public, unofficial API and requires an internet
   connection.
 - Music remains the property of its respective rights holders. Use it for
@@ -379,3 +422,7 @@ In pure browser preview these values live only in `localStorage`.
 **I want the old interface.**
 Use `NEONWAVE_UI=v2 python main.py` or
 `NEONWAVE_UI=old python main.py`. Nothing in the older frontends was removed.
+
+**The downloaded Windows exe will not start or has no sound.**
+Install 64-bit VLC, allow the file through SmartScreen/antivirus on first run,
+and follow the [Windows guide](docs/WINDOWS-GUIDE.md).
