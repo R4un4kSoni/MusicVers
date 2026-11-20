@@ -10,6 +10,11 @@ musicVer combines JioSaavn streaming, a local music library, playlists, saved
 albums, artist/album discovery, a glass player and a persistent light/dark
 theme in one small desktop app.
 
+> **Want to try it in a browser?** Open the static web app at
+> **[https://r4un4ksoni.github.io/MusicVers/](https://r4un4ksoni.github.io/MusicVers/)**.
+> It streams real music and saves your library locally in the browser.
+> See the [web guide](docs/WEB-GUIDE.md) for details.
+>
 > **Looking for the Windows app?** Download the ready-to-run **v1.0.0** build
 > from [GitHub Releases](https://github.com/R4un4kSoni/MusicVers/releases).
 > See the [Windows guide](docs/WINDOWS-GUIDE.md) for setup and troubleshooting.
@@ -18,6 +23,7 @@ theme in one small desktop app.
 
 ## Contents
 
+- [Web app](#web-app)
 - [Screenshots](#screenshots)
 - [Download the Windows app](#download-the-windows-app)
 - [Quick start](#quick-start)
@@ -39,6 +45,24 @@ theme in one small desktop app.
 - [Project layout](#project-layout)
 - [Data and privacy notes](#data-and-privacy-notes)
 - [Troubleshooting](#troubleshooting)
+
+---
+
+## Web app
+
+A static browser build is published with GitHub Pages:
+
+**<https://r4un4ksoni.github.io/MusicVers/>**
+
+It includes the full musicVer interface, real in-browser streaming, local music
+file/folder access, playlists, likes, saved albums, profile picture, theme and
+history. Account data is saved locally in the browser; there is no login and no
+server-side account store. The Windows app and the web app keep separate
+libraries.
+
+The web build lives in [`docs/`](docs/) and is deployed directly from `main`.
+See [`docs/WEB-GUIDE.md`](docs/WEB-GUIDE.md) for browser support, local-data
+details and caveats.
 
 ---
 

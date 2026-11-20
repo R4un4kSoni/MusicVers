@@ -1,0 +1,35 @@
+/* Static web build additions — kept separate from the desktop SPA CSS. */
+
+.web-badge {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 9999;
+  padding: 6px 10px;
+  border: 1px solid rgba(140, 140, 150, 0.28);
+  border-radius: 999px;
+  background: rgba(18, 19, 23, 0.62);
+  color: #f2f2f4;
+  font: 600 10px/1.2 'DM Sans', system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+  backdrop-filter: blur(10px);
+  opacity: 0.72;
+  transition: opacity 160ms ease;
+}
+
+.web-badge:hover,
+.web-badge:focus-visible {
+  opacity: 1;
+  color: #fff;
+}
+
+@media (max-width: 720px) {
+  .web-badge {
+    top: 8px;
+    right: 8px;
+    font-size: 9px;
+    padding: 5px 8px;
+  }
+}
