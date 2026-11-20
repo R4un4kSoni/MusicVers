@@ -96,6 +96,16 @@
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) MV.player.notify();
     });
+
+    const canRegisterWorker = 'serviceWorker' in navigator &&
+      (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') &&
+      !/Electron|MusicVer/i.test(navigator.userAgent || '');
+    if (canRegisterWorker) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register(new URL('sw.js', document.baseURI).href, { scope: './' })
+          .catch((error) => console.info('musicVer: offline shell not registered', error.message));
+      });
+    }
   }
 
   if (document.readyState === 'loading') {

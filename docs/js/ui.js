@@ -26,6 +26,9 @@
   MV.albumReturnPage = 'home';
   let artistToken = 0;
   let albumToken = 0;
+  let profileEditorOpen = false;
+  let selectedStoryMonth = '';
+  let storyIndex = 0;
 
   function el(id) { return document.getElementById(id); }
   function esc(value) {
@@ -326,11 +329,12 @@
       settings.wide ? 'media-card--wide' : '',
       settings.spotify ? 'media-card--spotify' : ''
     ].join(' ').replace(/\s+/g, ' ').trim();
+    const glyph = settings.glyph || (opensDetails ? '↗' : '▶');
 
     return '<article class="' + classes + '" tabindex="0" role="button" data-action="' + action + '" data-key="' + key + '" data-tilt aria-label="' + (opensDetails ? 'Open ' : 'Play ') + esc(title) + '">' +
       '<div class="media-card__art">' + image(item.cover, title) +
       '<span class="media-card__shine"></span>' +
-      '<button class="media-card__play" aria-label="' + (opensDetails ? 'Open details' : 'Play') + '">' + (opensDetails ? '↗' : '▶') + '</button>' +
+      '<button class="media-card__play" aria-label="' + (opensDetails ? 'Open details' : 'Open mix') + '">' + glyph + '</button>' +
       (type === 'album'
         ? '<button class="media-card__save ' + (saved ? 'is-saved' : '') + '" data-action="save-album" data-key="' + key + '" aria-label="Save album" title="Save album to library">' + (saved ? '✓' : '↓') + '</button>'
         : '') +
@@ -511,13 +515,13 @@
       ? discovered.albums : D.albums;
 
     el('trending-now').innerHTML = fillShelf(trending, D.songs, HOME_SHELF_SIZE)
-      .map((song) => mediaCard(song, 'song', { spotify: true })).join('');
+      .map((song) => mediaCard(song, 'song', { spotify: true, action: 'open-song-mix', glyph: '›' })).join('');
     el('albums-all').innerHTML = albumList.slice(0, 14)
-      .map((album) => mediaCard(album, 'album', { spotify: true })).join('');
+      .map((album) => mediaCard(album, 'album', { spotify: true, action: 'open-album-catalog', glyph: '›' })).join('');
     el('hindi-songs').innerHTML = languageShelf('Hindi')
-      .map((song) => mediaCard(song, 'song', { spotify: true })).join('');
+      .map((song) => mediaCard(song, 'song', { spotify: true, action: 'open-language-mix', glyph: '›' })).join('');
     el('english-songs').innerHTML = languageShelf('English')
-      .map((song) => mediaCard(song, 'song', { spotify: true })).join('');
+      .map((song) => mediaCard(song, 'song', { spotify: true, action: 'open-language-mix', glyph: '›' })).join('');
   }
 
   /* ---------------- discover ---------------- */
@@ -826,7 +830,168 @@
     MV.player.play(tracks[0], tracks);
   }
 
-  /* ---------------- album overview ---------------- */
+  /* ---------------- album overview + generated mixes ---------------- */
+
+  function uniqueItems(items, key) {
+    const seen = new Set();
+    const result = [];
+    (items || []).forEach((item) => {
+      if (!item) return;
+      const value = String(key(item) || '');
+      if (!value || seen.has(value)) return;
+      seen.add(value);
+      result.push(item);
+    });
+    return result;
+  }
+
+  function itemKey(item) {
+    return String(item && (item.id || item.title || item.name) || '').toLowerCase();
+  }
+
+  function rememberAlbumReturn() {
+    const activePage = document.querySelector('.page.is-active');
+    MV.albumReturnPage = (activePage && activePage.dataset.page) || 'home';
+    if (MV.albumReturnPage === 'album') MV.albumReturnPage = 'home';
+  }
+
+  function showGeneratedAlbum(album, tracks, albums, message) {
+    MV.albumState = { album, tracks: tracks || [], albums: albums || [], busy: false };
+    el('album-head-cover').innerHTML = image(album.cover, album.title || 'Album');
+    el('album-head-title').textContent = album.title || 'Album';
+    el('album-head-meta').textContent = 'Building your collection…';
+    navigate('album');
+    renderAlbum();
+    if (message) toast(message);
+  }
+
+  async function collectSearchResults(queries, kind) {
+    const responses = await Promise.all(queries.filter(Boolean).map((query) =>
+      MV.api.search(query).catch(() => null)));
+    const collected = [];
+    responses.forEach((response) => {
+      if (response && Array.isArray(response[kind])) collected.push.apply(collected, response[kind]);
+    });
+    return collected;
+  }
+
+  async function collectMixTracks(seeds, queries) {
+    const found = await collectSearchResults(queries, 'songs');
+    const fallback = (MV.discoverData && MV.discoverData.trending) || D.songs;
+    return uniqueItems([].concat(seeds || [], found, fallback), itemKey).slice(0, 50);
+  }
+
+  async function openSongMix(song) {
+    if (!song) return;
+    rememberAlbumReturn();
+    const queries = [
+      [song.title, song.artist].filter(Boolean).join(' '),
+      song.artist,
+      song.album ? [song.album, song.artist].filter(Boolean).join(' ') : '',
+      song.language ? String(song.language) + ' hits' : 'trending songs'
+    ];
+    const tracks = await collectMixTracks([song], queries);
+    const album = {
+      id: 'songmix-' + String(song.id || D.hash(song.title)).replace(/\W/g, ''),
+      title: (song.album || song.title) + ' Mix',
+      artist: song.artist || 'MusicVer Mix',
+      cover: song.cover,
+      kind: 'mix',
+      generated: true
+    };
+    showGeneratedAlbum(album, tracks, [], 'Built a ' + tracks.length + '-song mix around ' + song.title + '.');
+  }
+
+  async function openLanguageMix(language) {
+    const name = language || 'Hindi';
+    rememberAlbumReturn();
+    const queries = [
+      name + ' hits',
+      'top ' + name + ' songs',
+      name + ' songs 2026',
+      name === 'Hindi' ? 'bollywood hits' : 'english chart hits'
+    ];
+    const tracks = await collectMixTracks(languageShelf(name), queries);
+    const album = {
+      id: 'languagemix-' + name.toLowerCase(),
+      title: name + ' Hits · 50 Songs',
+      artist: 'MusicVer Mix',
+      cover: tracks[0] && tracks[0].cover,
+      language: name,
+      kind: 'mix',
+      generated: true
+    };
+    showGeneratedAlbum(album, tracks, [], name + ' mix ready with ' + tracks.length + ' full-length songs.');
+  }
+
+  async function openTrendingMix() {
+    rememberAlbumReturn();
+    const seeds = (MV.discoverData && MV.discoverData.trending) ? MV.discoverData.trending.slice(0, 20) : D.songs.slice(0, 12);
+    const tracks = await collectMixTracks(seeds, ['top songs', 'trending hits', 'jiosaavn top charts']);
+    const album = {
+      id: 'trendingmix',
+      title: 'Trending Now · 50 Songs',
+      artist: 'Live chart mix',
+      cover: seeds[0] && seeds[0].cover,
+      kind: 'mix',
+      generated: true
+    };
+    showGeneratedAlbum(album, tracks, [], 'Live chart mix ready with ' + tracks.length + ' songs.');
+  }
+
+  async function openAlbumCatalog(seedAlbum) {
+    const albumSeed = seedAlbum || (MV.discoverData && MV.discoverData.albums && MV.discoverData.albums[0]) || D.albums[0];
+    if (!albumSeed) return;
+    rememberAlbumReturn();
+    const queries = [
+      [albumSeed.title, albumSeed.artist].filter(Boolean).join(' '),
+      albumSeed.artist ? String(albumSeed.artist) + ' albums' : 'new albums',
+      albumSeed.language ? String(albumSeed.language) + ' albums' : 'top albums',
+      'popular albums',
+      'new album releases',
+      'top albums 2026',
+      'bollywood albums',
+      'pop albums'
+    ];
+    const found = await collectSearchResults(queries, 'albums');
+    const songAlbums = D.songs.map((song) => ({
+      id: 'album-' + D.hash(song.album || song.title),
+      title: song.album || song.title,
+      artist: song.artist,
+      cover: song.cover,
+      language: song.language
+    }));
+    const bundledAlbums = Object.keys((MV.webJioCatalog && MV.webJioCatalog.albums) || {}).map((key) => {
+      const record = MV.webJioCatalog.albums[key];
+      const firstTrack = MV.webJioCatalog.entries[String((record.tracks || [])[0])];
+      return {
+        id: record.id || D.hash(record.title),
+        title: record.title,
+        artist: record.artist,
+        cover: firstTrack && firstTrack.cover ? firstTrack.cover : '',
+        language: 'Hindi',
+        tracks: record.tracks || []
+      };
+    });
+    const albumIdentity = (item) => String((item && (item.title || item.name)) || '').toLowerCase() + '|' + String((item && item.artist) || '').toLowerCase();
+    const albums = uniqueItems([].concat(
+      [albumSeed],
+      found,
+      (MV.discoverData && MV.discoverData.albums) || [],
+      bundledAlbums,
+      D.albums,
+      songAlbums
+    ), albumIdentity).slice(0, 50);
+    const album = {
+      id: 'albumcatalog-' + String(albumSeed.id || D.hash(albumSeed.title)).replace(/\W/g, ''),
+      title: 'Album Catalog · 50 Picks',
+      artist: 'Curated from JioSaavn',
+      cover: albumSeed.cover,
+      kind: 'albumCatalog',
+      generated: true
+    };
+    showGeneratedAlbum(album, [], albums, 'Album catalog ready with ' + albums.length + ' records.');
+  }
 
   async function openAlbum(album, returnPage) {
     if (!album) return;
@@ -834,7 +999,7 @@
     const activePage = document.querySelector('.page.is-active');
     MV.albumReturnPage = returnPage || (activePage && activePage.dataset.page) || 'home';
     if (MV.albumReturnPage === 'album') MV.albumReturnPage = 'home';
-    MV.albumState = { album, tracks: [], busy: true };
+    MV.albumState = { album, tracks: [], albums: [], busy: true };
 
     el('album-head-cover').innerHTML = image(album.cover, album.title || 'Album');
     el('album-head-title').textContent = album.title || 'Album';
@@ -855,21 +1020,44 @@
     if (!state || !state.album) return;
     const album = state.album;
     const tracks = state.tracks || [];
+    const albums = state.albums || [];
+    const isCatalog = album.kind === 'albumCatalog';
+    const playButton = el('album-play');
+    const saveButton = el('album-save');
+    const note = el('album-note');
+
+    if (playButton) playButton.hidden = isCatalog;
+    if (saveButton) saveButton.hidden = isCatalog;
+    if (note) note.textContent = isCatalog
+      ? 'Browse the catalog, then open any record for its full track list.'
+      : 'Read-only collection · the title and cover come from the catalogue.';
 
     el('album-head-cover').innerHTML = image(album.cover, album.title || 'Album');
     el('album-head-title').textContent = album.title || 'Album';
     el('album-head-meta').textContent = state.busy
       ? 'Loading tracks…'
-      : tracks.length + ' songs · ' + (album.artist || 'Unknown artist') + ' · Read-only album';
+      : isCatalog
+        ? albums.length + ' albums · catalog · full-length playback'
+        : tracks.length + ' songs · ' + (album.artist || 'Unknown artist') + ' · Read-only album';
+
+    if (isCatalog) {
+      el('album-songs').innerHTML = albums.length
+        ? '<div class="album-grid">' + albums.map((item) =>
+            mediaCard(item, 'album', { spotify: true, action: 'open-album', glyph: '↗' })).join('') + '</div>'
+        : '<div class="empty-state"><span class="empty-state__icon">▤</span><h3>No albums found</h3><p>Try opening a catalog from another album.</p></div>';
+      return;
+    }
+
     el('album-songs').innerHTML = tracks.length
       ? tracks.map((song, i) => songRow(song, i)).join('')
       : '<div class="empty-state"><span class="empty-state__icon">♪</span><h3>No tracks found</h3><p>This album has no playable tracks in the current catalogue.</p></div>';
 
-    const save = el('album-save');
-    const saved = MV.store.isAlbumSaved(album);
-    save.textContent = saved ? '✓ Saved to library' : '↓ Save album';
-    save.classList.toggle('is-on', saved);
-    save.setAttribute('aria-pressed', String(saved));
+    if (saveButton) {
+      const saved = MV.store.isAlbumSaved(album);
+      saveButton.textContent = saved ? '✓ Saved to library' : '↓ Save album';
+      saveButton.classList.toggle('is-on', saved);
+      saveButton.setAttribute('aria-pressed', String(saved));
+    }
   }
 
   /* ---------------- artist detail ---------------- */
@@ -1148,7 +1336,7 @@
 
   /* ---------------- navigation ---------------- */
 
-  const PAGE_ORDER = ['home', 'library', 'discover', 'account', 'playlist', 'album', 'artist', 'report'];
+  const PAGE_ORDER = ['home', 'library', 'discover', 'stats', 'account', 'playlist', 'album', 'artist', 'report'];
 
   function updatePageShifts(page) {
     const activeIndex = PAGE_ORDER.indexOf(page);
@@ -1181,7 +1369,7 @@
   }
 
   function navigate(page) {
-    const names = { home: 'HOME', library: 'LIBRARY', discover: 'DISCOVER', account: 'ACCOUNT', playlist: 'YOUR PLAYLIST', album: 'ALBUM', artist: 'ARTIST', report: 'REPORT' };
+    const names = { home: 'HOME', library: 'LIBRARY', discover: 'DISCOVER', stats: 'LISTENING STATS', account: 'ACCOUNT', playlist: 'YOUR PLAYLIST', album: 'ALBUM', artist: 'ARTIST', report: 'REPORT' };
     slideToPage(page, document.querySelector('.page.is-active'), document.querySelector('#page-' + page));
     document.querySelectorAll('.island-tab').forEach((tab) =>
       tab.classList.toggle('is-active', tab.dataset.nav === page));
@@ -1189,6 +1377,8 @@
     document.querySelector('.stage').scrollTop = 0;
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (page === 'library') renderLibrary();
+    if (page === 'account') renderAccount();
+    if (page === 'stats') renderStatsPage();
     if (page === 'playlist') renderPlaylistDetail();
     if (page === 'album') renderAlbum();
     el('island').classList.remove('is-open');
@@ -1386,6 +1576,18 @@
           break;
         case 'open-album':
           openAlbum(item);
+          break;
+        case 'open-song-mix':
+          await openSongMix(item);
+          break;
+        case 'open-album-catalog':
+          await openAlbumCatalog(item);
+          break;
+        case 'open-language-mix':
+          await openLanguageMix(target.dataset.language || (item && item.language) || 'Hindi');
+          break;
+        case 'open-trending-mix':
+          await openTrendingMix();
           break;
         case 'play-artist':
           await doPlayArtist(item);
@@ -1634,6 +1836,39 @@
       }
     };
 
+    const profileEditToggle = el('profile-edit-toggle');
+    if (profileEditToggle) profileEditToggle.onclick = () => {
+      profileEditorOpen = !profileEditorOpen;
+      const editor = el('profile-editor');
+      if (editor) editor.hidden = !profileEditorOpen;
+      profileEditToggle.textContent = profileEditorOpen ? 'Close' : 'Edit';
+      profileEditToggle.setAttribute('aria-expanded', String(profileEditorOpen));
+    };
+    const statsMonth = el('stats-month');
+    if (statsMonth) statsMonth.onchange = (event) => {
+      selectedStoryMonth = event.target.value;
+      storyIndex = 0;
+      renderStatsPage();
+    };
+    const wrappedPrev = el('wrapped-prev');
+    if (wrappedPrev) wrappedPrev.onclick = () => {
+      storyIndex = Math.max(0, storyIndex - 1);
+      renderStatsPage();
+    };
+    const wrappedNext = el('wrapped-next');
+    if (wrappedNext) wrappedNext.onclick = () => {
+      const slides = statsSlides(MV.store.playStats(selectedStoryMonth));
+      storyIndex = storyIndex >= slides.length - 1 ? 0 : storyIndex + 1;
+      renderStatsPage();
+    };
+    const wrappedDots = el('wrapped-dots');
+    if (wrappedDots) wrappedDots.onclick = (event) => {
+      const dot = event.target.closest('[data-slide]');
+      if (!dot) return;
+      storyIndex = Number(dot.dataset.slide) || 0;
+      renderStatsPage();
+    };
+
     el('profile-save').onclick = () => {
       const name = el('profile-name').value.trim();
       if (!name) { toast('Enter a name first.'); return; }
@@ -1682,8 +1917,8 @@
     el('setting-history').onchange = (event) => MV.store.setProfile('rememberSearches', event.target.checked);
     el('clear-searches').onclick = () => { MV.store.clearRecentSearches(); toast('Recent searches cleared.'); };
     el('clear-history').onclick = () => {
-      confirmModal('Clear listening history?', 'Recently played items will be removed.', 'Clear', () => {
-        MV.store.clearRecentlyPlayed(); renderHome(); toast('History cleared.');
+      confirmModal('Clear listening history?', 'Recently played items and listening stats will be removed.', 'Clear', () => {
+        MV.store.clearListeningHistory(); renderHome(); renderAccount(); toast('History cleared.');
       });
     };
 
@@ -1848,19 +2083,129 @@
     toast(next === 'dark' ? 'Dark mode on' : 'Light mode on');
   }
 
+  /* ---------------- listening stats tab ---------------- */
+
+  function monthLabel(key) {
+    const date = new Date(String(key) + '-01T00:00:00');
+    if (isNaN(date.getTime())) return String(key);
+    return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }
+
+  function currentMonthKey() {
+    const now = new Date();
+    return String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  }
+
+  function statsSlides(stats) {
+    const topSong = stats.topSong;
+    const topArtist = stats.topArtist;
+    const empty = !stats.total;
+
+    return [
+      {
+        theme: 'intro',
+        html: '<p class="wrapped-kicker">musicVer wrapped</p>' +
+          '<h2 class="wrapped-title">Your <em>' + esc(stats.monthName) + '</em> in sound.</h2>' +
+          '<p class="wrapped-copy">' + (empty
+            ? 'No plays recorded yet. Play a few songs and come back to unwrap your month.'
+            : 'A story built from every song you pressed play on this device.') + '</p>'
+      },
+      {
+        theme: 'plays',
+        html: '<p class="wrapped-kicker">You showed up</p>' +
+          '<div class="wrapped-big">' + stats.total + '</div>' +
+          '<h2 class="wrapped-title">plays this month.</h2>' +
+          '<p class="wrapped-copy">' + stats.uniqueSongs + ' different songs. ' +
+          (stats.listenedSeconds ? Math.max(1, Math.round(stats.listenedSeconds / 60)) + ' minutes of soundtrack. ' : '') +
+          'Every one of them yours.</p>'
+      },
+      {
+        theme: 'artist',
+        html: '<p class="wrapped-kicker">Your top artist</p>' +
+          '<h2 class="wrapped-title">' + esc(topArtist ? topArtist.name : 'Nobody yet') + '</h2>' +
+          '<p class="wrapped-copy">' + (topArtist
+            ? 'You came back to ' + esc(topArtist.name) + ' ' + topArtist.count + (topArtist.count === 1 ? ' time' : ' times') + ' this month.'
+            : 'Play a few songs and your most-listened artist will appear here.') + '</p>'
+      },
+      {
+        theme: 'song',
+        html: '<p class="wrapped-kicker">Your most-played song</p>' +
+          (topSong ? '<div class="wrapped-cover">' + image(topSong.cover, topSong.title) + '</div>' : '') +
+          '<h2 class="wrapped-title">' + esc(topSong ? topSong.title : 'Nothing yet') + '</h2>' +
+          '<p class="wrapped-copy">' + (topSong
+            ? esc(topSong.artist) + ' · played ' + topSong.count + (topSong.count === 1 ? ' time' : ' times')
+            : 'Your repeat anthem is still waiting to be discovered.') + '</p>'
+      },
+      {
+        theme: 'songs',
+        html: '<p class="wrapped-kicker">Your rotation</p>' +
+          '<h2 class="wrapped-title">Top songs.</h2>' +
+          '<div class="wrapped-rank-list">' + ((stats.songs || []).length
+            ? stats.songs.map((song, index) =>
+                '<div class="wrapped-rank"><span>' + (index + 1) + '</span>' +
+                '<strong>' + esc(song.title) + '</strong>' +
+                '<em>' + song.count + '×</em></div>').join('')
+            : '<div class="wrapped-rank"><span>—</span><strong>No plays yet</strong><em>0×</em></div>') + '</div>'
+      },
+      {
+        theme: 'outro',
+        html: '<p class="wrapped-kicker">That is your month</p>' +
+          '<h2 class="wrapped-title">Keep the <em>streak</em> alive.</h2>' +
+          '<p class="wrapped-copy">' + (empty
+            ? 'Your next play starts a brand-new story.'
+            : 'From ' + stats.total + ' plays to one very clear favourite. Here is to the next ' + esc(monthLabel(selectedStoryMonth)) + '.') + '</p>'
+      }
+    ];
+  }
+
+  function renderStatsPage() {
+    const select = el('stats-month');
+    const stage = el('wrapped-stage');
+    if (!select || !stage) return;
+
+    const current = currentMonthKey();
+    const months = uniqueItems([current].concat(MV.store.playMonths()), (key) => key);
+    if (selectedStoryMonth && months.indexOf(selectedStoryMonth) < 0) selectedStoryMonth = '';
+    if (!selectedStoryMonth) selectedStoryMonth = months[0] || current;
+    select.innerHTML = months.map((key) =>
+      '<option value="' + esc(key) + '"' + (key === selectedStoryMonth ? ' selected' : '') + '>' + esc(monthLabel(key)) + '</option>').join('');
+
+    const stats = MV.store.playStats(selectedStoryMonth);
+    const slides = statsSlides(stats);
+    storyIndex = Math.max(0, Math.min(storyIndex, slides.length - 1));
+    const slide = slides[storyIndex];
+    stage.innerHTML = '<div class="wrapped-slide wrapped-slide--' + slide.theme + '">' + slide.html + '</div>';
+
+    const dots = el('wrapped-dots');
+    if (dots) {
+      dots.innerHTML = slides.map((_, index) =>
+        '<button type="button" data-slide="' + index + '" aria-label="Story slide ' + (index + 1) + '"' +
+        ' class="' + (index === storyIndex ? 'is-current' : (index < storyIndex ? 'is-done' : '')) + '"></button>').join('');
+    }
+    const prev = el('wrapped-prev');
+    const next = el('wrapped-next');
+    if (prev) prev.disabled = storyIndex === 0;
+    if (next) next.textContent = storyIndex === slides.length - 1 ? 'Replay ↺' : 'Next →';
+  }
+
   /* ---------------- account + render all ---------------- */
 
   function renderAccount() {
     const profile = MV.store.state.profile;
     const initial = (profile.name || 'M').charAt(0).toUpperCase();
     el('profile-name').value = profile.name || '';
-    if (profile.picture) {
-      const picture = '<img src="' + esc(profile.picture) + '" alt="Profile picture">';
-      el('account-avatar').innerHTML = picture;
-      el('top-avatar').innerHTML = picture;
-    } else {
-      el('account-avatar').textContent = initial;
-      el('top-avatar').textContent = initial;
+    const displayName = el('profile-display-name');
+    if (displayName) displayName.textContent = profile.name || 'Music Lover';
+    const pictureHtml = profile.picture ? '<img src="' + esc(profile.picture) + '" alt="Profile picture">' : initial;
+    if (el('account-avatar')) el('account-avatar').innerHTML = pictureHtml;
+    if (el('top-avatar')) el('top-avatar').innerHTML = pictureHtml;
+    if (el('mobile-tab-avatar')) el('mobile-tab-avatar').innerHTML = pictureHtml;
+    const editor = el('profile-editor');
+    if (editor) editor.hidden = !profileEditorOpen;
+    const editToggle = el('profile-edit-toggle');
+    if (editToggle) {
+      editToggle.textContent = profileEditorOpen ? 'Close' : 'Edit';
+      editToggle.setAttribute('aria-expanded', String(profileEditorOpen));
     }
     const removeAvatar = el('remove-avatar');
     if (removeAvatar) removeAvatar.hidden = !profile.picture;
@@ -1919,14 +2264,19 @@
       renderHome();
       renderLibrary();
       updatePlayer(MV.player.snapshot());
+      const active = document.querySelector('.page.is-active');
+      if (active && active.id === 'page-stats') renderStatsPage();
     });
+    const inDesktop = /Electron|MusicVer/i.test(navigator.userAgent || '');
+    document.documentElement.classList.toggle('is-desktop', inDesktop);
     const pages = document.querySelector('.pages');
     if (pages) {
       const active = document.querySelector('.page.is-active');
       updatePageShifts(active ? active.dataset.page || 'home' : 'home');
-      pages.classList.add('is-sliding');
+      // Windows/desktop uses instant tab switching; the slide animation stays
+      // on the browser and Android builds only.
+      if (!inDesktop) pages.classList.add('is-sliding');
     }
-    const inDesktop = /Electron|MusicVer/i.test(navigator.userAgent || '');
     const notice = el('beta-notice');
     if (!inDesktop && notice) {
       setTimeout(() => {

@@ -21,6 +21,7 @@
     playlists: [],
     recentSearches: [],
     recentlyPlayed: [],
+    playEvents: [],
     demoSeeded: false,
     theme: 'light',
     volume: 70,
@@ -239,6 +240,75 @@
     },
 
     clearRecentlyPlayed() { state.recentlyPlayed = []; save(); },
+
+    clearListeningHistory() {
+      state.recentlyPlayed = [];
+      state.playEvents = [];
+      save();
+    },
+
+    recordPlay(track) {
+      if (!track) return;
+      const entry = {
+        id: track.id,
+        title: track.title || 'Untitled',
+        artist: track.artist || 'Unknown artist',
+        cover: track.cover || '',
+        playedAt: Date.now()
+      };
+      const events = Array.isArray(state.playEvents) ? state.playEvents : [];
+      state.playEvents = events.concat(entry).slice(-5000);
+      save('play');
+    },
+
+    playMonths() {
+      const keys = {};
+      (state.playEvents || []).forEach((entry) => {
+        const date = new Date(entry.playedAt || 0);
+        if (isNaN(date.getTime())) return;
+        keys[String(date.getFullYear()) + '-' + String(date.getMonth() + 1).padStart(2, '0')] = true;
+      });
+      return Object.keys(keys).sort().reverse();
+    },
+
+    playStats(month) {
+      const now = new Date();
+      const selected = month || String(now.getFullYear()) + '-' + String(now.getMonth() + 1).padStart(2, '0');
+      const monthKey = (entry) => {
+        const date = new Date(entry.playedAt || 0);
+        return isNaN(date.getTime()) ? '' : String(date.getFullYear()) + '-' + String(date.getMonth() + 1).padStart(2, '0');
+      };
+      const events = (state.playEvents || []).filter((entry) => monthKey(entry) === selected);
+      const songs = {};
+      const artists = {};
+      let listenedSeconds = 0;
+
+      events.forEach((entry) => {
+        const songKey = String(entry.title || entry.id || 'song').toLowerCase() + '|' + String(entry.artist || '').toLowerCase();
+        const artistKey = String(entry.artist || 'Unknown artist');
+        if (!songs[songKey]) songs[songKey] = { count: 0, title: entry.title, artist: entry.artist, cover: entry.cover };
+        songs[songKey].count += 1;
+        if (!artists[artistKey]) artists[artistKey] = { count: 0, name: artistKey };
+        artists[artistKey].count += 1;
+        listenedSeconds += Number(entry.duration) || 0;
+      });
+
+      const rankedSongs = Object.keys(songs).map((key) => songs[key]).sort((a, b) => b.count - a.count);
+      const rankedArtists = Object.keys(artists).map((key) => artists[key]).sort((a, b) => b.count - a.count);
+      const monthName = new Date(selected + '-01T00:00:00').toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+      return {
+        month: selected,
+        monthName: isNaN(new Date(selected + '-01T00:00:00').getTime()) ? selected : monthName,
+        total: events.length,
+        uniqueSongs: rankedSongs.length,
+        songs: rankedSongs.slice(0, 5),
+        artists: rankedArtists.slice(0, 3),
+        topSong: rankedSongs[0] || null,
+        topArtist: rankedArtists[0] || null,
+        listenedSeconds: Math.round(listenedSeconds)
+      };
+    },
 
     /* ---------------- backend hydration ---------------- */
     replaceLibrary(library) {

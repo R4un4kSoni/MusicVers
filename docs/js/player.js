@@ -194,6 +194,15 @@
       subtitle: state.current.artist,
       cover: state.current.cover
     });
+    if (MV.store.recordPlay) {
+      MV.store.recordPlay({
+        id: state.current.id,
+        title: state.current.title,
+        artist: state.current.artist,
+        cover: state.current.cover,
+        duration: state.current.duration
+      });
+    }
 
     applyAccent(state.current.cover, state.current.title + state.current.artist);
     notify();
