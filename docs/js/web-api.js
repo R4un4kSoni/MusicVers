@@ -2,8 +2,10 @@
    musicVer · static web bridge
    Replaces the Python/pywebview engine on GitHub Pages.
 
-   - live catalogue: saavn.sumit.co (CORS-enabled, no key)
-   - audio: direct aac.saavncdn.com streams via HTMLAudioElement
+   - live catalogue: JioSaavn-compatible APIs + itunes.apple.com (CORS-enabled)
+   - full mainstream audio: JioSaavn original streams resolved at runtime
+   - static ID map: fast fallback for popular tracks and whole albums
+   - all audio: direct aac.saavncdn.com streams via HTMLAudioElement
    - account data: localStorage (same MV.store used by the desktop SPA)
    - local music: File System Access API / file input, files stay on device
    ============================================================ */
@@ -12,6 +14,7 @@
   'use strict';
 
   const DEFAULT_API = 'https://saavn.sumit.co/api';
+  const JIO_LIVE_APIS = ['https://saavnx.vercel.app/api', DEFAULT_API];
   const ITUNES_API = 'https://itunes.apple.com';
   const API_BASE_KEY = 'musicver.web.apiBase';
   const CACHE_KEY = 'musicver.web.cache.v1';
@@ -21,7 +24,12 @@
 
   const apiBase = read(API_BASE_KEY) || DEFAULT_API;
   const streamCache = new Map();
+  const itunesMeta = new Map();
+  const jioFullCache = new Map();
+  const jioLiveSearchCache = new Map();
+  const jioLivePending = new Map();
   const localTracks = new Map();
+  const jioCatalog = MV.webJioCatalog || { songs: {}, albums: {}, entries: {} };
   let folderName = read(FOLDER_KEY) || '';
   let playbackState = 'stopped';
   let switching = false;
@@ -153,9 +161,9 @@
     };
   }
 
-  /* iTunes fills the gaps in JioSaavn's regional catalogue for international
-     artists. Its previews are 30 seconds, but they are real, CORS-enabled
-     audio and make mainstream searches useful in a static browser build. */
+  /* iTunes fills the metadata gaps in JioSaavn's regional catalogue. Its own
+     audio is only a 30-second preview, so mainstream playback is remapped to
+     the matching JioSaavn original from the generated ID catalogue below. */
 
   function itunesArtwork(url, size) {
     if (!url) return '';
@@ -167,6 +175,14 @@
     const id = 'itunes-' + String(item.trackId || hash((item.trackName || '') + (item.artistName || '')));
     const cover = itunesArtwork(item.artworkUrl100 || item.artworkUrl60);
     streamCache.set(id, [item.previewUrl]);
+    itunesMeta.set(id, {
+      id: id,
+      title: decode(item.trackName || item.title || 'Unknown title'),
+      artist: decode(item.artistName || 'Unknown artist'),
+      album: decode(item.collectionName || 'Unknown album'),
+      duration: Math.round((item.trackTimeMillis || 0) / 1000),
+      cover: cover
+    });
     return {
       id: id,
       title: decode(item.trackName || item.title || 'Unknown title'),
@@ -237,6 +253,262 @@
     const data = await itunesFetch('/lookup?id=' + encodeURIComponent(id) +
       '&entity=' + encodeURIComponent(entity || 'song') + '&country=US&limit=200');
     return data && Array.isArray(data.results) ? data.results : [];
+  }
+
+  /* ---------------- full-length JioSaavn streams ----------------
+     Browsers cannot call JioSaavn's private web API because it does not send
+     CORS headers. The desktop Python app can, which is why main.py plays
+     originals in full. This build ships a small ID map generated from that
+     API at build time. At runtime a CORS-enabled JioSaavn-compatible search
+     API resolves any available artist dynamically, and the public mirror
+     supplies full-length aac.saavncdn.com audio — no external video fallback,
+     no server and no 30-second preview for resolved tracks. */
+
+  function jioNorm(value) {
+    return decode(value || '').toLowerCase()
+      .replace(/\([^)]*feat[^)]*\)/gi, ' ')
+      .replace(/\[[^\]]*feat[^\]]*\]/gi, ' ')
+      .replace(/[^a-z0-9\u0900-\u097f]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function jioLookup(title, artist) {
+    const name = jioNorm(title);
+    const byArtist = jioNorm(artist);
+    if (!name || !byArtist) return null;
+    if (jioCatalog.songs[name + '|' + byArtist]) return jioCatalog.songs[name + '|' + byArtist];
+    const shortened = jioNorm(String(title || '').replace(/\([^)]*\)/g, ' ').replace(/\[[^\]]*\]/g, ' '));
+    return jioCatalog.songs[shortened + '|' + byArtist] || null;
+  }
+
+  function jioAlbumLookup(title, artist) {
+    const name = jioNorm(title);
+    const albums = jioCatalog.albums || {};
+    if (!name || !albums[name]) {
+      const byArtist = jioNorm(artist);
+      let match = null;
+      Object.keys(albums).forEach((key) => {
+        const entry = albums[key];
+        const candidate = jioNorm(entry && (entry.title || key));
+        if (!candidate || !(candidate === name || candidate.indexOf(name) >= 0 || name.indexOf(candidate) >= 0)) return;
+        const entryArtist = jioNorm(entry && entry.artist);
+        if (byArtist && entryArtist && entryArtist !== byArtist && entryArtist.indexOf(byArtist) < 0) return;
+        match = entry;
+      });
+      return albums[name] || match;
+    }
+    return albums[name];
+  }
+
+  function jioAlbumById(id) {
+    const key = String(id || '');
+    if (!key) return null;
+    const albums = jioCatalog.albums || {};
+    return Object.keys(albums).map((name) => albums[name])
+      .find((entry) => entry && String(entry.id) === key) || null;
+  }
+
+  function toJioFullTrack(id, fallback) {
+    const key = String(id || '');
+    if (!key) return null;
+    const entry = jioCatalog.entries[key] || null;
+    const cover = (entry && entry.cover) || (fallback && (fallback.cover || fallback.image)) || '';
+    const entryStreams = entry && Array.isArray(entry.streams) ? entry.streams : [];
+    const fallbackStreams = fallback && Array.isArray(fallback.downloadUrl)
+      ? fallback.downloadUrl.map((item) => item && item.url).filter(Boolean) : [];
+    const streams = entryStreams.length ? entryStreams : (entry && entry.stream ? [entry.stream] : fallbackStreams);
+    if (streams.length) streamCache.set(key, streams);
+    const raw = (fallback && (fallback.raw || fallback)) || entry || {};
+    return {
+      id: key,
+      title: (entry && entry.title) || (fallback && fallback.title) || key,
+      artist: (entry && entry.artist) || (fallback && fallback.artist) || 'Unknown artist',
+      album: (entry && entry.album) || (fallback && fallback.album) || 'Unknown album',
+      duration: String((entry && entry.duration) || (fallback && fallback.duration) || 0),
+      language: (fallback && fallback.language) || '',
+      provider: 'jiosaavn',
+      path: 'stream:jiosaavn:' + key,
+      cover: cover,
+      image: cover,
+      downloadUrl: streams.map((url, index) => ({ quality: index ? 'stream' : '160kbps', url: url })),
+      raw: raw
+    };
+  }
+
+  function jioFullTrackFor(raw) {
+    if (!raw) return null;
+    const title = raw.title || raw.name || raw.trackName || raw.song || '';
+    const artist = raw.artist || raw.artistName || artistName(raw);
+    const knownId = jioCatalog.entries[String(raw.id)] ? String(raw.id) : null;
+    const id = knownId || jioLookup(title, artist);
+    return id ? toJioFullTrack(id, raw) : null;
+  }
+
+  function mapToJioFull(items) {
+    return (items || []).map((item) => jioFullTrackFor(item) || item);
+  }
+
+  function isLocalDesktop() {
+    return /^http:\/\/127\.0\.0\.1:\d+$/.test(location.origin);
+  }
+
+  let jioWebSearchAvailable = true;
+
+  async function jioWebSearch(query) {
+    if (!isLocalDesktop() || !jioWebSearchAvailable) return null;
+    try {
+      const data = await fetchJson(location.origin, '/__jio/search?q=' + encodeURIComponent(query));
+      if (!data || !data.success || !Array.isArray(data.results)) return null;
+      return data.results;
+    } catch (error) {
+      jioWebSearchAvailable = false;
+      return null;
+    }
+  }
+
+  function jioBadTrack(track) {
+    const text = jioNorm([track && track.title, track && track.artist, track && track.album].join(' '));
+    return /\b(karaoke|instrumental|tribute|emulation|cover version|sped up|slowed|nightcore|performed by)\b/.test(text);
+  }
+
+  async function jioLiveSearch(query, limit) {
+    const needle = String(query || '').trim();
+    if (!needle) return [];
+    const size = Math.max(20, Math.min(50, Number(limit) || 20));
+    const cacheKey = jioNorm(needle) + '|' + size;
+    if (jioLiveSearchCache.has(cacheKey)) return jioLiveSearchCache.get(cacheKey).slice(0, size);
+    if (jioLivePending.has(cacheKey)) return jioLivePending.get(cacheKey);
+
+    const request = (async function () {
+      const allowVariants = /(karaoke|instrumental|tribute|sped|slowed|nightcore|cover)/i.test(needle);
+      let lastError = null;
+      for (let index = 0; index < JIO_LIVE_APIS.length; index += 1) {
+        try {
+          const data = await fetchJson(JIO_LIVE_APIS[index],
+            '/search/songs?query=' + encodeURIComponent(needle) + '&limit=' + size);
+          const songs = data && data.data && Array.isArray(data.data.results) ? data.data.results : [];
+          const tracks = dedupeById(songs.map(toTrackRaw).filter(Boolean)
+            .filter((track) => allowVariants || !jioBadTrack(track)));
+          if (tracks.length) {
+            jioLiveSearchCache.set(cacheKey, tracks);
+            return tracks;
+          }
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (lastError) console.info('musicVer: live JioSaavn search unavailable', lastError.message);
+      jioLiveSearchCache.set(cacheKey, []);
+      return [];
+    }());
+
+    jioLivePending.set(cacheKey, request);
+    try {
+      return await request;
+    } finally {
+      jioLivePending.delete(cacheKey);
+    }
+  }
+
+  function jioMatchScore(track, title, artist) {
+    const wantedTitle = jioNorm(title);
+    const wantedArtist = jioNorm(artist);
+    const gotTitle = jioNorm(track && track.title);
+    const gotArtist = jioNorm(track && track.artist);
+    const gotAlbum = jioNorm(track && track.album);
+    let score = 0;
+
+    if (wantedTitle && gotTitle === wantedTitle) score += 10;
+    else if (wantedTitle && (gotTitle.indexOf(wantedTitle) >= 0 || wantedTitle.indexOf(gotTitle) >= 0)) score += 6;
+
+    if (wantedArtist && gotArtist === wantedArtist) score += 10;
+    else if (wantedArtist && (gotArtist.indexOf(wantedArtist) >= 0 || wantedArtist.indexOf(gotArtist) >= 0)) score += 6;
+    else if (wantedArtist && gotAlbum.indexOf(wantedArtist) >= 0) score += 2;
+
+    if (wantedTitle && wantedArtist && gotTitle === wantedTitle && gotArtist === wantedArtist) score += 8;
+    if (jioBadTrack(track)) score -= 20;
+    score += (Number(track && track.duration) || 0) > 40 ? 2 : -8;
+    return score;
+  }
+
+  async function jioLiveMatch(title, artist) {
+    if (!jioNorm(title)) return null;
+    const query = String(title || '').trim() + (artist ? ' ' + String(artist).trim() : '');
+    const candidates = await jioLiveSearch(query, 12);
+    if (!candidates.length) return null;
+    const ranked = candidates
+      .map((track) => ({ track: track, score: jioMatchScore(track, title, artist) }))
+      .sort((a, b) => b.score - a.score);
+    return ranked[0] && ranked[0].score >= 8 ? ranked[0].track : null;
+  }
+
+  function featuredCatalogTracks(limit) {
+    const ids = Array.isArray(jioCatalog.featured) && jioCatalog.featured.length
+      ? jioCatalog.featured : Object.keys(jioCatalog.entries || {});
+    return ids.slice(0, Number(limit) || 20).map((id) => toJioFullTrack(id)).filter(Boolean);
+  }
+
+  function searchJioCatalog(query, limit) {
+    const needle = jioNorm(query);
+    if (!needle) return [];
+    const tokens = needle.split(' ').filter(Boolean);
+    const matches = [];
+    Object.keys(jioCatalog.entries || {}).forEach((id) => {
+      const entry = jioCatalog.entries[id];
+      const title = jioNorm(entry && entry.title);
+      const artist = jioNorm(entry && entry.artist);
+      const album = jioNorm(entry && entry.album);
+      const haystack = title + ' ' + artist + ' ' + album;
+      let score = 0;
+      if (title === needle) score += 10;
+      else if (title && (title.indexOf(needle) >= 0 || needle.indexOf(title) >= 0)) score += 6;
+      if (artist === needle) score += 10;
+      else if (artist && (artist.indexOf(needle) >= 0 || needle.indexOf(artist) >= 0)) score += 6;
+      const covered = tokens.filter((token) => haystack.indexOf(token) >= 0).length;
+      score += tokens.length && covered === tokens.length ? 8 + tokens.length : covered * 2;
+      if (score >= 6) matches.push({ id: id, score: score });
+    });
+    matches.sort((a, b) => b.score - a.score || String(a.id).localeCompare(String(b.id)));
+    return matches.slice(0, Number(limit) || 20).map((item) => toJioFullTrack(item.id)).filter(Boolean);
+  }
+
+  async function resolveJioFull(id) {
+    const key = String(id || '');
+    if (jioFullCache.has(key)) return jioFullCache.get(key);
+    const bundled = jioCatalog.entries[key];
+    if (bundled) {
+      const track = toJioFullTrack(key);
+      const urls = streamCache.get(key) || [];
+      if (urls.length) {
+        const result = { track: track, urls: urls };
+        jioFullCache.set(key, result);
+        return result;
+      }
+    }
+    const data = await fetchJson(apiBase, '/songs/' + encodeURIComponent(key));
+    let list = data && Array.isArray(data.data) ? data.data : [];
+    if (!list.length && data && data.data && Array.isArray(data.data.songs)) list = data.data.songs;
+    const song = list.find((item) => item && String(item.id) === key) || list[0];
+    if (!song || !Array.isArray(song.downloadUrl) || !song.downloadUrl.length) {
+      throw new Error('Full JioSaavn stream is not available for this track.');
+    }
+    const track = toTrackRaw(song);
+    const result = { track: track, urls: streamCache.get(track.id) || [] };
+    jioFullCache.set(key, result);
+    return result;
+  }
+
+  async function playJioFull(id, meta) {
+    const resolved = await resolveJioFull(id);
+    currentTrack = resolved.track;
+    if (meta && meta.cover && !currentTrack.cover) {
+      currentTrack.cover = meta.cover;
+      currentTrack.image = meta.cover;
+    }
+    rememberStreams([currentTrack]);
+    await startPlayback(resolved.urls);
+    return { success: true, source: 'jiosaavn', full: true };
   }
 
   function seedTracks() {
@@ -343,10 +615,13 @@
       const title = String(track.title || '').toLowerCase();
       const artist = String(track.artist || '').toLowerCase();
       let score = 0;
-      if (artist === needle) score = track.provider === 'itunes' ? 5 : 4;
-      else if (title === needle) score = 3;
-      else if (artist.indexOf(needle) >= 0 || title.indexOf(needle) >= 0) score = 2;
-      else if (needle.split(/\s+/).some((part) => part && (artist.indexOf(part) >= 0 || title.indexOf(part) >= 0))) score = 1;
+      if (artist === needle) score = 6;
+      else if (title === needle) score = 5;
+      else if (artist.indexOf(needle) >= 0 || title.indexOf(needle) >= 0) score = 4;
+      else if (needle.split(/\s+/).some((part) => part && (artist.indexOf(part) >= 0 || title.indexOf(part) >= 0))) score = 2;
+      if (track.provider === 'jiosaavn' && (track.downloadUrl || []).length &&
+          Number(track.duration) > 40) score += 8;
+      if (track.provider === 'itunes') score -= 4;
       return { track, score, index };
     }).sort((a, b) => b.score - a.score || a.index - b.index).map((entry) => entry.track);
   }
@@ -495,7 +770,7 @@
 
     try {
       await startPlayback(urls);
-      return { success: true, source: apiBase };
+      return { success: true, source: 'jiosaavn', full: true };
     } catch (error) {
       playbackState = 'paused';
       return { success: false, message: 'Playback was blocked — click play again.' };
@@ -505,27 +780,34 @@
   async function playItunes(id) {
     const key = String(id || '');
     const rawId = key.replace(/^itunes-/, '');
-    let urls = streamCache.get(key);
-    if (!urls || !urls.length) {
+    let lookupItem = null;
+    let track = itunesMeta.get(key) || seedTracks().concat(cachedTracks())
+      .find((item) => String(item.id) === key) || null;
+
+    if (!track) {
       try {
         const items = await itunesLookup(rawId, 'song');
-        const item = items.find((entry) => String(entry.trackId) === rawId);
-        if (!item || !item.previewUrl) {
-          return { success: false, message: 'This preview is no longer available.' };
-        }
-        currentTrack = toItunesTrackRaw(item);
-        urls = [item.previewUrl];
-      } catch (error) {
-        const all = seedTracks().concat(cachedTracks());
-        currentTrack = all.find((item) => String(item.id) === key) || null;
-        urls = currentTrack && streamCache.get(key);
-      }
+        lookupItem = items.find((entry) => String(entry.trackId) === rawId) || null;
+        if (lookupItem) track = toItunesTrackRaw(lookupItem);
+      } catch (error) { /* use the cached preview below */ }
+    }
+
+    if (track) {
+      const full = jioFullTrackFor(track) || await jioLiveMatch(track.title, track.artist);
+      if (full) return playJioFull(full.id, track);
+    }
+
+    let urls = streamCache.get(key);
+    if ((!urls || !urls.length) && lookupItem && lookupItem.previewUrl) {
+      currentTrack = track || toItunesTrackRaw(lookupItem);
+      urls = [lookupItem.previewUrl];
     }
     if (!urls || !urls.length) {
-      return { success: false, message: 'This preview is no longer available.' };
+      return { success: false, message: 'This track is not currently available.' };
     }
     if (!currentTrack) {
-      currentTrack = seedTracks().concat(cachedTracks()).find((item) => String(item.id) === key) || null;
+      currentTrack = itunesMeta.get(key) || seedTracks().concat(cachedTracks())
+        .find((item) => String(item.id) === key) || null;
     }
     try {
       await startPlayback(urls);
@@ -726,10 +1008,12 @@
       }
 
       const queries = ['top hindi songs', 'bollywood hits', 'arijit singh', 'romantic hindi', 'english hits'];
-      const mainstreamQueries = ['Joji', 'The Weeknd', 'Billie Eilish', 'Taylor Swift', 'Imagine Dragons', 'Ed Sheeran'];
-      const [jioSettled, itunesSettled] = await Promise.all([
+      const mainstreamQueries = ['Joji', 'The Weeknd', 'Billie Eilish', 'Taylor Swift',
+        'Imagine Dragons', 'Ed Sheeran', 'Steve Lacy', 'Doechii', 'Tame Impala'];
+      const [jioSettled, itunesSettled, liveSettled] = await Promise.all([
         Promise.allSettled(queries.map(searchCatalogue)),
-        Promise.allSettled(mainstreamQueries.map((name) => itunesSearchSongs(name, 8)))
+        Promise.allSettled(mainstreamQueries.map((name) => itunesSearchSongs(name, 8))),
+        Promise.allSettled(mainstreamQueries.map((name) => jioLiveSearch(name, 8)))
       ]);
 
       let jioSongs = [];
@@ -745,11 +1029,17 @@
       itunesSettled.filter((item) => item.status === 'fulfilled').forEach((item) => {
         itunesSongs = itunesSongs.concat(item.value);
       });
+      let liveSongs = [];
+      liveSettled.filter((item) => item.status === 'fulfilled').forEach((item) => {
+        liveSongs = liveSongs.concat(item.value);
+      });
       const sourceItems = itunesSongs.slice(0, 40).map((track) => track.raw).filter(Boolean);
       const mainstreamArtists = sourceItems.map((item) => toItunesArtistRaw(item)).filter(Boolean);
       const mainstreamAlbums = sourceItems.map((item) => toItunesAlbumRaw(item)).filter(Boolean);
+      const catalogSongs = featuredCatalogTracks(12);
 
-      let songs = interleave(dedupeById(jioSongs), dedupeById(itunesSongs));
+      let songs = dedupeById(catalogSongs.concat(liveSongs, mapToJioFull(jioSongs)));
+      if (!songs.length) songs = dedupeById(mapToJioFull(itunesSongs));
       const albums = dedupeById(jioAlbums.concat(mainstreamAlbums));
       const artists = dedupeById(jioArtists.concat(mainstreamArtists));
 
@@ -772,10 +1062,12 @@
       const needle = String(query || '').trim();
       if (!needle) return { success: true, results: [], albums: [], artists: [], source: 'online' };
       try {
-        const [jioResult, songResult, artistResult] = await Promise.allSettled([
+        const [jioResult, songResult, artistResult, jioWebResult, liveResult] = await Promise.allSettled([
           searchCatalogue(needle),
           itunesSearchSongs(needle, 20),
-          itunesSearchArtists(needle, 10)
+          itunesSearchArtists(needle, 10),
+          jioWebSearch(needle),
+          jioLiveSearch(needle, 30)
         ]);
         const jio = jioResult.status === 'fulfilled'
           ? jioResult.value : { songs: [], albums: [], artists: [] };
@@ -783,8 +1075,23 @@
         const itunesArtists = artistResult.status === 'fulfilled' ? artistResult.value : [];
         const songArtists = itunesSongs.slice(0, 8)
           .map((track) => toItunesArtistRaw(track.raw)).filter(Boolean);
+        const dynamicJio = jioWebResult.status === 'fulfilled' && Array.isArray(jioWebResult.value)
+          ? jioWebResult.value.map((item) => toJioFullTrack(item.id, {
+            title: item.title,
+            artist: item.artist,
+            album: item.album,
+            duration: item.duration,
+            cover: item.cover,
+            raw: item
+          })).filter(Boolean) : [];
+        const liveJio = liveResult.status === 'fulfilled' ? liveResult.value : [];
 
-        const songs = rankTracks(dedupeById(jio.songs.concat(itunesSongs)), needle).slice(0, 40);
+        const catalogMatches = searchJioCatalog(needle, 15);
+        let songs = dedupeById(liveJio.concat(catalogMatches, dynamicJio, mapToJioFull(jio.songs)));
+        if (songs.length < 6) {
+          songs = dedupeById(songs.concat(mapToJioFull(itunesSongs)));
+        }
+        songs = rankTracks(songs, needle).slice(0, 40);
         const artists = rankArtists(dedupeById(jio.artists.concat(itunesArtists, songArtists)), needle).slice(0, 12);
         const albums = dedupeById(jio.albums).slice(0, 12);
         rememberStreams(songs);
@@ -809,10 +1116,20 @@
         try {
           const rawId = albumId.replace(/^itunes-album-/, '');
           const items = await itunesLookup(rawId, 'song');
-          const tracks = items.filter((entry) => entry.wrapperType === 'track' &&
-            String(entry.collectionId) === rawId).map(toItunesTrackRaw).filter(Boolean);
-          rememberStreams(tracks);
-          return { success: true, tracks: tracks };
+          const own = items.filter((entry) => entry.wrapperType === 'track' &&
+            String(entry.collectionId) === rawId);
+          const tracks = own.map(toItunesTrackRaw).filter(Boolean);
+          const source = own[0] || {};
+          const jioAlbum = jioAlbumLookup(source.collectionName, source.artistName);
+          let fullTracks = mapToJioFull(tracks);
+          if (jioAlbum && Array.isArray(jioAlbum.tracks) && jioAlbum.tracks.length) {
+            fullTracks = jioAlbum.tracks.map((trackId) => {
+              const match = tracks.find((item) => jioLookup(item.title, item.artist) === trackId);
+              return toJioFullTrack(trackId, match);
+            }).filter(Boolean);
+          }
+          rememberStreams(fullTracks);
+          return { success: true, tracks: fullTracks };
         } catch (error) {
           return { success: true, tracks: [] };
         }
@@ -820,12 +1137,24 @@
       try {
         const data = await apiFetch('/albums?id=' + encodeURIComponent(id));
         const album = data && data.data ? data.data : {};
-        const tracks = (Array.isArray(album.songs) ? album.songs : []).map(toTrackRaw).filter(Boolean);
+        let tracks = mapToJioFull((Array.isArray(album.songs) ? album.songs : []).map(toTrackRaw).filter(Boolean));
+        const bundled = jioAlbumById(id);
+        if ((!tracks.length || !bundled) && bundled && Array.isArray(bundled.tracks)) {
+          tracks = bundled.tracks.map((trackId) => toJioFullTrack(trackId)).filter(Boolean);
+        }
+        if (!tracks.length) {
+          const local = localMatches('');
+          tracks = local.songs.slice(0, 12);
+        }
         rememberStreams(tracks.slice(0, 50));
-        return { success: true, tracks: tracks };
+        return { success: true, tracks: tracks, source: bundled ? 'jiosaavn' : apiBase };
       } catch (error) {
-        const local = localMatches('');
-        return { success: true, tracks: local.songs.slice(0, 12) };
+        const bundled = jioAlbumById(id);
+        const tracks = bundled && Array.isArray(bundled.tracks)
+          ? bundled.tracks.map((trackId) => toJioFullTrack(trackId)).filter(Boolean)
+          : localMatches('').songs.slice(0, 12);
+        rememberStreams(tracks.slice(0, 50));
+        return { success: true, tracks: tracks, source: bundled ? 'jiosaavn' : apiBase };
       }
     },
 
@@ -837,7 +1166,7 @@
           const items = await itunesLookup(rawId, 'song');
           const own = items.filter((entry) => entry.wrapperType === 'track' &&
             String(entry.artistId) === rawId);
-          const tracks = own.map(toItunesTrackRaw).filter(Boolean);
+          const tracks = mapToJioFull(own.map(toItunesTrackRaw).filter(Boolean));
           rememberStreams(tracks);
           if (section === 'songs') {
             const size = Number(limit) || 20;
@@ -868,8 +1197,10 @@
       try {
         if (section === 'songs') {
           const data = await apiFetch('/artists/' + artistId + '/songs?page=' + (Number(page) + 1));
-          const songs = (data && data.data && Array.isArray(data.data.songs) ? data.data.songs : [])
-            .map(toTrackRaw).filter(Boolean);
+          const songs = mapToJioFull(
+            (data && data.data && Array.isArray(data.data.songs) ? data.data.songs : [])
+              .map(toTrackRaw).filter(Boolean)
+          );
           rememberStreams(songs.slice(0, 40));
           return { success: true, songs: songs };
         }
@@ -878,7 +1209,7 @@
         const bio = Array.isArray(artist.bio)
           ? artist.bio.map((item) => item && item.text ? item.text : '').join(' ')
           : String(artist.bio || '');
-        const songs = (artist.topSongs || []).map(toTrackRaw).filter(Boolean);
+        const songs = mapToJioFull((artist.topSongs || []).map(toTrackRaw).filter(Boolean));
         rememberStreams(songs.slice(0, 40));
         return {
           success: true,
@@ -911,9 +1242,8 @@
     play_song: playLocal,
 
     pause_song() {
-      const element = getAudio();
       switching = false;
-      element.pause();
+      getAudio().pause();
       return { success: true };
     },
 
@@ -952,7 +1282,8 @@
         success: true,
         current_time: Number(element.currentTime) || 0,
         total_time: total,
-        playback_state: playbackState
+        playback_state: playbackState,
+        source: currentTrack && currentTrack.provider === 'jiosaavn' ? 'jiosaavn' : ''
       };
     },
 

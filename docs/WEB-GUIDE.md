@@ -15,9 +15,11 @@ the browser. No Python, VLC, or server account is required.
   such as Joji, The Weeknd, Billie Eilish and Taylor Swift — then open artist
   and album pages.
 - Stream real audio directly in the browser with play/pause, seek, volume,
-  queue, shuffle, repeat and auto-advance. JioSaavn tracks play in full where
-  available; international tracks use official Apple Music **30-second
-  previews** because full streaming is region/licence restricted.
+  queue, shuffle, repeat and auto-advance. Search results are resolved live to
+  full-length JioSaavn originals for any artist available in JioSaavn, including
+  Steve Lacy, Doechii and Tame Impala. A bundled ID map also pins popular songs
+  and whole albums such as Joji's *SMITHEREENS*, Hans Zimmer's *Inception* and
+  The Weeknd's *After Hours*. There is no external video fallback.
 - Likes, saved albums, playlists, playlist covers, profile picture, light/dark
   theme, volume, search history and recently played items.
 - Flow State, ambient accents and the dynamic island navigation.
@@ -51,12 +53,16 @@ streams and uses a normal HTML audio element, so playback and seeking work
 without VLC. If a stream is blocked by the provider, the player tries the next
 available quality and then falls back to cached or bundled demo tracks.
 
-A small bundled catalogue is included as an offline fallback. Live catalogue
-and audio require an internet connection. JioSaavn data comes from the
-unofficial `saavn.sumit.co` mirror, while international/mainstream results come
-from Apple Music's public iTunes Search API. Both services can change or
-rate-limit without notice; this project is a portfolio demo, not a commercial
-streaming service. Apple Music previews are intentionally limited to 30 seconds.
+A small bundled catalogue and a generated JioSaavn ID map are included with the
+static build. Live catalogue and audio require an internet connection. Search
+uses a CORS-enabled JioSaavn-compatible API at runtime, so full-length
+`aac.saavncdn.com` streams are found dynamically rather than being limited to the
+bundled map. Apple Music's public iTunes Search API is used for metadata only;
+even an older 30-second iTunes result is upgraded to a matching JioSaavn original
+when played. The bundled map is produced with `tools/build_web_jio_catalog.py`
+and is only a fast fallback. These unofficial services can change or rate-limit
+without notice; this project is a portfolio demo, not a commercial streaming
+service.
 
 ## Browser support
 
