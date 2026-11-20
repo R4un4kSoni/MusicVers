@@ -1,5 +1,143 @@
 /* Static web build additions — kept separate from the desktop SPA CSS. */
 
+/* V-beta notice */
+.beta-notice[hidden] { display: none; }
+.beta-notice {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 200;
+  width: min(520px, calc(100% - 28px));
+  padding: 20px 58px 20px 20px;
+  border: 1px solid rgba(255, 255, 255, .9);
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .97), rgba(246, 241, 233, .96));
+  box-shadow: 0 24px 70px rgba(43, 37, 28, .22), inset 0 1px 0 #fff;
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, -18px) scale(.98);
+  transition: opacity .3s ease, transform .3s var(--ease-out), visibility .3s ease;
+}
+.beta-notice.is-visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+.beta-notice__tag {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: 700 10px/1 var(--font-ui);
+  letter-spacing: .12em;
+}
+.beta-notice__title {
+  display: block;
+  font: 600 20px/1.2 var(--font-display);
+  color: var(--ink);
+}
+.beta-notice__text {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink-soft);
+  font: 500 12px/1.5 var(--font-ui);
+}
+.beta-notice__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .8);
+  color: var(--ink);
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .18s ease, transform .18s ease;
+}
+.beta-notice__close:hover,
+.beta-notice__close:focus-visible {
+  background: rgba(var(--accent-rgb), .14);
+  transform: rotate(90deg);
+  outline: none;
+}
+:root[data-theme="dark"] .beta-notice {
+  background: linear-gradient(135deg, rgba(30, 31, 37, .97), rgba(20, 21, 26, .97));
+  border-color: rgba(255, 255, 255, .1);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .5);
+}
+:root[data-theme="dark"] .beta-notice__close { background: rgba(255, 255, 255, .08); }
+
+/* Compact interface scale — smaller text, cards and controls. */
+body { font-size: 13px; }
+.page-intro { margin: 6px 0 14px; }
+.page-intro h1 { font-size: clamp(30px, 3.4vw, 42px); }
+.page-intro__sub { font-size: 12px; }
+.eyebrow { font-size: 9px; letter-spacing: .13em; }
+.hero { min-height: 300px; border-radius: 24px; }
+.hero-content h2 { font-size: clamp(30px, 4vw, 46px); }
+.hero-copy { font-size: 12px; }
+.shelf { margin-top: 20px; }
+.shelf-head h2 { font-size: 18px; }
+.media-card { padding: 9px; border-radius: 16px; }
+.media-card__title, .media-card__sub { font-size: 11px; }
+.song-row { padding: 7px 10px; border-radius: 12px; }
+.song-row__title { font-size: 11px; }
+.song-row__sub { font-size: 10px; }
+.library-content { margin-top: 18px; }
+.library-tabs { gap: 6px; }
+.library-tab { padding: 6px 11px; font-size: 11px; }
+.player { height: 78px; padding: 8px 14px; border-radius: 22px; }
+.player-art { width: 54px; height: 54px; }
+.player-track__copy strong { font-size: 12px; }
+.player-track__copy span { font-size: 10px; }
+.player-controls { gap: 11px; }
+.player-control { width: 30px; height: 30px; }
+.search-bar { width: min(560px, 100%); gap: 8px; padding: 6px 6px 6px 14px; }
+.search-bar__icon { width: 17px; height: 17px; }
+.search-bar input { height: 34px; font-size: 12px; }
+.search-bar .btn { min-height: 32px; padding: 0 12px; font-size: 11px; }
+input[type="text"], input[type="search"], textarea { font-size: 12px; }
+input[type="text"], input[type="search"] { height: 36px; padding: 0 11px; }
+
+/* Liked, saved and create are stacked one after another and compact. */
+.library-tiles {
+  grid-template-columns: 1fr;
+  max-width: 320px;
+  gap: 8px;
+}
+.lib-tile { gap: 11px; padding: 10px 12px; border-radius: 14px; }
+.lib-tile__icon { width: 34px; height: 34px; border-radius: 10px; font-size: 15px; }
+.lib-tile__copy strong { font-size: 12px; }
+.lib-tile__copy small { font-size: 10px; }
+
+/* Slide between pages. Home → Library → Discover → Account slides through
+   the intermediate tabs instead of cutting straight to the destination. */
+.pages.is-sliding { position: relative; overflow: hidden; }
+.pages.is-sliding .page {
+  display: block;
+  position: absolute;
+  inset: 0 0 auto 0;
+  pointer-events: none;
+  animation: none;
+  transform: translateX(var(--page-shift, 0%));
+  transition: transform .58s var(--ease-in-out);
+  will-change: transform;
+}
+.pages.is-sliding .page.is-active {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
 /* Compact top-right menu: one three-dot control instead of separate bubbles. */
 .top-menu { position: relative; }
 .top-menu__toggle svg circle { fill: currentColor; stroke: none; }

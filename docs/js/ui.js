@@ -1148,10 +1148,41 @@
 
   /* ---------------- navigation ---------------- */
 
+  const PAGE_ORDER = ['home', 'library', 'discover', 'account', 'playlist', 'album', 'artist', 'report'];
+
+  function updatePageShifts(page) {
+    const activeIndex = PAGE_ORDER.indexOf(page);
+    document.querySelectorAll('.page').forEach((section) => {
+      const index = PAGE_ORDER.indexOf(section.dataset.page || '');
+      const shift = index < 0 || activeIndex < 0 ? 0 : index - activeIndex;
+      section.style.setProperty('--page-shift', (shift * 100) + '%');
+    });
+  }
+
+  function slideToPage(page, activeSection, targetSection) {
+    if (!targetSection) return;
+    const pagesRoot = document.querySelector('.pages');
+    const activePage = activeSection ? activeSection.dataset.page || '' : '';
+    const canSlide = pagesRoot && pagesRoot.classList.contains('is-sliding') &&
+      activeSection && activeSection !== targetSection;
+
+    if (canSlide) {
+      // Place the incoming page where it sat relative to the old tab, then
+      // move both pages in one transition so intermediate tabs pass by.
+      updatePageShifts(activePage);
+      void targetSection.offsetWidth;
+      updatePageShifts(page);
+    } else {
+      updatePageShifts(page);
+    }
+
+    document.querySelectorAll('.page').forEach((section) =>
+      section.classList.toggle('is-active', section === targetSection));
+  }
+
   function navigate(page) {
     const names = { home: 'HOME', library: 'LIBRARY', discover: 'DISCOVER', account: 'ACCOUNT', playlist: 'YOUR PLAYLIST', album: 'ALBUM', artist: 'ARTIST', report: 'REPORT' };
-    document.querySelectorAll('.page').forEach((section) =>
-      section.classList.toggle('is-active', section.id === 'page-' + page));
+    slideToPage(page, document.querySelector('.page.is-active'), document.querySelector('#page-' + page));
     document.querySelectorAll('.island-tab').forEach((tab) =>
       tab.classList.toggle('is-active', tab.dataset.nav === page));
     el('crumb').textContent = names[page] || String(page).toUpperCase();
@@ -1283,6 +1314,15 @@
   }
 
   function initEvents() {
+    const betaNotice = el('beta-notice');
+    const betaClose = el('beta-notice-close');
+    if (betaNotice && betaClose) {
+      betaClose.onclick = () => {
+        betaNotice.classList.remove('is-visible');
+        betaNotice.hidden = true;
+      };
+    }
+
     const topMenu = el('top-menu');
     const topMenuToggle = el('top-menu-toggle');
     const closeTopMenu = () => {
@@ -1880,9 +1920,19 @@
       renderLibrary();
       updatePlayer(MV.player.snapshot());
     });
+    const pages = document.querySelector('.pages');
+    if (pages) {
+      const active = document.querySelector('.page.is-active');
+      updatePageShifts(active ? active.dataset.page || 'home' : 'home');
+      pages.classList.add('is-sliding');
+    }
     const inDesktop = /Electron|MusicVer/i.test(navigator.userAgent || '');
-    if (!inDesktop) {
-      setTimeout(() => toast('MusicVer Web V-beta — this web version is still being finished.'), 900);
+    const notice = el('beta-notice');
+    if (!inDesktop && notice) {
+      setTimeout(() => {
+        notice.hidden = false;
+        requestAnimationFrame(() => notice.classList.add('is-visible'));
+      }, 450);
     }
   }
 
