@@ -1283,6 +1283,35 @@
   }
 
   function initEvents() {
+    const topMenu = el('top-menu');
+    const topMenuToggle = el('top-menu-toggle');
+    const closeTopMenu = () => {
+      if (!topMenu) return;
+      topMenu.classList.remove('is-open');
+      if (topMenuToggle) topMenuToggle.setAttribute('aria-expanded', 'false');
+      const list = el('top-menu-list');
+      if (list) list.setAttribute('aria-hidden', 'true');
+    };
+    if (topMenuToggle && topMenu) {
+      topMenuToggle.onclick = (event) => {
+        event.stopPropagation();
+        const open = !topMenu.classList.contains('is-open');
+        topMenu.classList.toggle('is-open', open);
+        topMenuToggle.setAttribute('aria-expanded', String(open));
+        const list = el('top-menu-list');
+        if (list) list.setAttribute('aria-hidden', String(!open));
+      };
+      topMenu.addEventListener('click', (event) => {
+        if (event.target.closest('.top-menu__item')) closeTopMenu();
+      });
+      document.addEventListener('click', (event) => {
+        if (!event.target.closest('.top-menu')) closeTopMenu();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeTopMenu();
+      });
+    }
+
     document.addEventListener('click', async (event) => {
       const target = event.target.closest('[data-action], [data-nav], [data-library-tab], [data-rail], [data-hero]');
       if (!target) {
@@ -1851,6 +1880,10 @@
       renderLibrary();
       updatePlayer(MV.player.snapshot());
     });
+    const inDesktop = /Electron|MusicVer/i.test(navigator.userAgent || '');
+    if (!inDesktop) {
+      setTimeout(() => toast('MusicVer Web V-beta — this web version is still being finished.'), 900);
+    }
   }
 
   MV.ui = {

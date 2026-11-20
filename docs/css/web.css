@@ -1,35 +1,195 @@
 /* Static web build additions — kept separate from the desktop SPA CSS. */
 
-.web-badge {
-  position: fixed;
-  top: 12px;
-  right: 14px;
-  z-index: 9999;
-  padding: 6px 10px;
-  border: 1px solid rgba(140, 140, 150, 0.28);
-  border-radius: 999px;
-  background: rgba(18, 19, 23, 0.62);
-  color: #f2f2f4;
-  font: 600 10px/1.2 'DM Sans', system-ui, sans-serif;
-  letter-spacing: 0.06em;
-  text-decoration: none;
-  text-transform: uppercase;
-  backdrop-filter: blur(10px);
-  opacity: 0.72;
-  transition: opacity 160ms ease;
+/* Compact top-right menu: one three-dot control instead of separate bubbles. */
+.top-menu { position: relative; }
+.top-menu__toggle svg circle { fill: currentColor; stroke: none; }
+.top-menu__list {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 95;
+  min-width: 210px;
+  padding: 8px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, .96);
+  border: 1px solid rgba(255, 255, 255, .98);
+  box-shadow: 0 18px 46px rgba(43, 37, 28, .18);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(.98);
+  transform-origin: top right;
+  transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
 }
-
-.web-badge:hover,
-.web-badge:focus-visible {
+.top-menu.is-open .top-menu__list {
   opacity: 1;
-  color: #fff;
+  visibility: visible;
+  transform: none;
+}
+.top-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ink);
+  font: 600 13px/1.2 'DM Sans', system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease;
+}
+.top-menu__item:hover,
+.top-menu__item:focus-visible {
+  background: rgba(var(--accent-rgb), .12);
+  color: var(--accent);
+  outline: none;
+}
+.top-menu__item svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.top-menu__item .theme-toggle__glyph {
+  width: 18px;
+  flex: 0 0 auto;
+  font-size: 17px;
+  text-align: center;
+}
+.top-menu__item .top-avatar {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  font-size: 13px;
+  box-shadow: none;
+}
+:root[data-theme="dark"] .top-menu__list {
+  background: rgba(24, 25, 30, .97);
+  border-color: rgba(255, 255, 255, .1);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .4);
+}
+:root[data-theme="dark"] .top-menu__item { color: #f2f2f4; }
+
+/* Android / small-screen layout. The dynamic island is replaced by a bottom
+   tab bar so the app is usable with touch and one hand. */
+.mobile-nav { display: none; }
+
+@media (max-width: 820px) {
+  .edge-sensor,
+  .island {
+    display: none !important;
+  }
+
+  .stage {
+    margin-left: 0;
+    padding: 0 12px 220px;
+  }
+
+  .stage-top {
+    margin: 0 -12px 12px;
+    padding: 0 12px;
+  }
+
+  .stage-top__right { gap: 8px; }
+  .round-icon { width: 34px; height: 34px; }
+
+  .mobile-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 90;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    height: calc(64px + env(safe-area-inset-bottom));
+    padding: 0 6px env(safe-area-inset-bottom);
+    background: rgba(250, 248, 244, .94);
+    border-top: 1px solid rgba(90, 80, 70, .12);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+  }
+
+  :root[data-theme="dark"] .mobile-nav {
+    background: rgba(18, 19, 23, .94);
+    border-top-color: rgba(255, 255, 255, .1);
+  }
+
+  .mobile-nav .island-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    height: 64px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink-faint);
+    transform: none;
+  }
+
+  .mobile-nav .island-tab:hover,
+  .mobile-nav .island-tab:focus-visible {
+    background: transparent;
+    color: var(--accent);
+    transform: none;
+  }
+
+  .mobile-nav .island-tab.is-active { color: var(--accent); background: transparent; }
+  .mobile-nav .island-tab.is-active::before { display: none; }
+  .mobile-nav .island-tab__icon { width: 21px; height: 21px; }
+  .mobile-nav .island-tab__label { font-size: 10px; letter-spacing: .02em; }
+
+  .player {
+    left: 8px;
+    right: 8px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    height: auto;
+    min-height: 96px;
+    padding: 10px 12px;
+    border-radius: 22px;
+    grid-template-columns: 1fr auto;
+    gap: 8px 12px;
+  }
+
+  .player-center { grid-column: 1 / -1; grid-row: 2; }
+  .player-extra { grid-column: 2; grid-row: 1; }
+  .player-extra input[type="range"] { width: 84px; }
+  .player-track { min-width: 0; }
+
+  .hero-copy { display: none; }
+  .hero-content { width: 100%; }
+  .library-tiles,
+  .account-grid,
+  .results-songs-split { grid-template-columns: 1fr; }
+
+  .flow-inner {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 72px 20px 32px;
+    overflow-y: auto;
+  }
+
+  .flow-visual,
+  .flow-vinyl { display: none; }
 }
 
-@media (max-width: 720px) {
-  .web-badge {
-    top: 8px;
-    right: 8px;
-    font-size: 9px;
-    padding: 5px 8px;
-  }
+@media (max-width: 480px) {
+  .stage { padding-left: 10px; padding-right: 10px; }
+  .stage-top { padding-left: 10px; padding-right: 10px; }
+  .wordmark { font-size: 18px; }
+  .crumb { display: none; }
+  .player-extra { display: none; }
+  .player { grid-template-columns: 1fr; }
+  .player-center { grid-column: 1; }
 }

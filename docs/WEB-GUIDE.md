@@ -5,7 +5,8 @@ The static web build is published with GitHub Pages:
 **<https://r4un4ksoni.github.io/MusicVers/>**
 
 It uses the same `musicVer` interface as the Windows app, but runs entirely in
-the browser. No Python, VLC, or server account is required.
+the browser. No Python, VLC, or server account is required. A V-beta notice
+appears when the web app opens because this build is still being finished.
 
 ## What works on the web
 
@@ -22,7 +23,10 @@ the browser. No Python, VLC, or server account is required.
   The Weeknd's *After Hours*. There is no external video fallback.
 - Likes, saved albums, playlists, playlist covers, profile picture, light/dark
   theme, volume, search history and recently played items.
-- Flow State, ambient accents and the dynamic island navigation.
+- Flow State, ambient accents and the dynamic island navigation. The top-right
+  actions are collected in a single three-dot menu. On Android and other small
+  screens, the dynamic island is replaced by a bottom tab bar and the layout
+  adapts for touch.
 - Choose a local music folder (Chrome/Edge) or select local audio files
   (other browsers). Files stay on your device and are never uploaded.
 

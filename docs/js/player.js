@@ -29,6 +29,7 @@
 
   let progressBusy = false;
   let toggleBusy = false;
+  let playSequence = 0;
   let autoAdvanceHandled = false;
   let pauseGraceUntil = 0;
   let flowOpened = false;
@@ -146,6 +147,7 @@
   async function play(track, list, options) {
     const prepared = prepare(track);
     if (!prepared) return;
+    const sequence = ++playSequence;
 
     const settings = options || {};
     if (Array.isArray(list) && list.length) {
@@ -197,6 +199,7 @@
     notify();
 
     const result = await MV.api.play(state.current);
+    if (sequence !== playSequence) return;
     state.simulated = Boolean(result && result.simulated);
     if (result && result.success === false) {
       MV.ui.toast(result.message || 'Playback could not start.');

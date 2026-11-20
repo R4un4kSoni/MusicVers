@@ -37,6 +37,7 @@
   let audio = null;
   let streamQueue = [];
   let streamIndex = 0;
+  let playRequestId = 0;
 
   /* ---------------- small storage helpers ---------------- */
 
@@ -499,15 +500,18 @@
     return result;
   }
 
-  async function playJioFull(id, meta) {
+  async function playJioFull(id, meta, requestId) {
+    const token = requestId == null ? ++playRequestId : requestId;
     const resolved = await resolveJioFull(id);
+    if (token !== playRequestId) return { success: false, stale: true };
     currentTrack = resolved.track;
     if (meta && meta.cover && !currentTrack.cover) {
       currentTrack.cover = meta.cover;
       currentTrack.image = meta.cover;
     }
     rememberStreams([currentTrack]);
-    await startPlayback(resolved.urls);
+    await startPlayback(resolved.urls, token);
+    if (token !== playRequestId) return { success: false, stale: true };
     return { success: true, source: 'jiosaavn', full: true };
   }
 
@@ -726,7 +730,10 @@
     return audio;
   }
 
-  function startPlayback(urls) {
+  function startPlayback(urls, requestId) {
+    if (requestId != null && requestId !== playRequestId) {
+      return Promise.resolve({ success: false, stale: true });
+    }
     const list = orderedStreams(urls);
     if (!list.length) return Promise.reject(new Error('No playable stream found.'));
     streamQueue = list;
@@ -744,6 +751,7 @@
   }
 
   async function playJioSaavn(id) {
+    const token = ++playRequestId;
     const key = String(id || '').replace(/^stream:jiosaavn:/, '');
     let urls = streamCache.get(key);
     let track = null;
@@ -751,17 +759,20 @@
     if (!urls || !urls.length) {
       try {
         const data = await apiFetch('/songs?ids=' + encodeURIComponent(key));
+        if (token !== playRequestId) return { success: false, stale: true };
         const song = data && Array.isArray(data.data) ? data.data[0] : null;
         if (!song) throw new Error('Track not found.');
         track = toTrackRaw(song);
         rememberStreams([track]);
         urls = streamCache.get(track.id);
       } catch (error) {
+        if (token !== playRequestId) return { success: false, stale: true };
         track = seedTracks().find((item) => String(item.id) === key) || null;
         urls = track && streamCache.get(track.id);
       }
     }
 
+    if (token !== playRequestId) return { success: false, stale: true };
     if (!track) {
       const all = seedTracks().concat(cachedTracks());
       track = all.find((item) => String(item.id) === key) || { id: key, duration: 0 };
@@ -769,15 +780,18 @@
     currentTrack = track;
 
     try {
-      await startPlayback(urls);
+      await startPlayback(urls, token);
+      if (token !== playRequestId) return { success: false, stale: true };
       return { success: true, source: 'jiosaavn', full: true };
     } catch (error) {
+      if (token !== playRequestId) return { success: false, stale: true };
       playbackState = 'paused';
       return { success: false, message: 'Playback was blocked — click play again.' };
     }
   }
 
   async function playItunes(id) {
+    const token = ++playRequestId;
     const key = String(id || '');
     const rawId = key.replace(/^itunes-/, '');
     let lookupItem = null;
@@ -787,6 +801,7 @@
     if (!track) {
       try {
         const items = await itunesLookup(rawId, 'song');
+        if (token !== playRequestId) return { success: false, stale: true };
         lookupItem = items.find((entry) => String(entry.trackId) === rawId) || null;
         if (lookupItem) track = toItunesTrackRaw(lookupItem);
       } catch (error) { /* use the cached preview below */ }
@@ -794,7 +809,8 @@
 
     if (track) {
       const full = jioFullTrackFor(track) || await jioLiveMatch(track.title, track.artist);
-      if (full) return playJioFull(full.id, track);
+      if (token !== playRequestId) return { success: false, stale: true };
+      if (full) return playJioFull(full.id, track, token);
     }
 
     let urls = streamCache.get(key);
@@ -810,21 +826,25 @@
         .find((item) => String(item.id) === key) || null;
     }
     try {
-      await startPlayback(urls);
+      await startPlayback(urls, token);
+      if (token !== playRequestId) return { success: false, stale: true };
       return { success: true, source: 'itunes', preview: true };
     } catch (error) {
+      if (token !== playRequestId) return { success: false, stale: true };
       playbackState = 'paused';
       return { success: false, message: 'Playback was blocked — click play again.' };
     }
   }
 
   async function playLocal(path) {
+    const token = ++playRequestId;
     const requested = String(path || '');
     const key = requested.indexOf('local:') === 0 ? requested.slice(6) : requested;
     let entry = localTracks.get(key) || Array.from(localTracks.values())
       .find((item) => String(item.raw && item.raw.path) === requested);
     if (!entry) {
       await restorePromise;
+      if (token !== playRequestId) return { success: false, stale: true };
       entry = localTracks.get(key) || Array.from(localTracks.values())
         .find((item) => String(item.raw && item.raw.path) === requested);
     }
@@ -833,9 +853,11 @@
     }
     currentTrack = entry.raw;
     try {
-      await startPlayback([entry.url]);
+      await startPlayback([entry.url], token);
+      if (token !== playRequestId) return { success: false, stale: true };
       return { success: true };
     } catch (error) {
+      if (token !== playRequestId) return { success: false, stale: true };
       return { success: false, message: 'Playback was blocked — click play again.' };
     }
   }
@@ -1242,6 +1264,7 @@
     play_song: playLocal,
 
     pause_song() {
+      playRequestId += 1;
       switching = false;
       getAudio().pause();
       return { success: true };
@@ -1254,6 +1277,7 @@
     },
 
     stop_song() {
+      playRequestId += 1;
       const element = getAudio();
       element.pause();
       try { element.currentTime = 0; } catch (error) { /* ignore */ }
