@@ -6,15 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f7f5f1">
   <title>musicVers</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="pwa/icon-192.png">
+  <link rel="apple-touch-icon" href="pwa/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=1108">
-  <link rel="stylesheet" href="css/layout.css?v=1108">
-  <link rel="stylesheet" href="css/components.css?v=1108">
-  <link rel="stylesheet" href="css/web.css?v=1108">
+  <link rel="stylesheet" href="css/base.css?v=1113">
+  <link rel="stylesheet" href="css/layout.css?v=1113">
+  <link rel="stylesheet" href="css/components.css?v=1113">
+  <link rel="stylesheet" href="css/web.css?v=1113">
 </head>
 
 <body>
@@ -73,6 +76,12 @@
             </span>
             <span class="island-tab__label">Discover</span>
           </button>
+          <button class="island-tab" data-nav="stats" title="Listening Stats">
+            <span class="island-tab__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-4M12 16V8M16 16v-7M20 16v-3" /></svg>
+            </span>
+            <span class="island-tab__label">Stats</span>
+          </button>
           <button class="island-tab" data-nav="account" title="Account">
             <span class="island-tab__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="4" /><path d="M4.5 20c.6-4 3.5-6 7.5-6s6.9 2 7.5 6" /></svg>
@@ -104,11 +113,8 @@
         </span>
         <span class="island-tab__label">Discover</span>
       </button>
-      <button class="island-tab mobile-tab" data-nav="account" aria-label="Account">
-        <span class="island-tab__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="4" /><path d="M4.5 20c.6-4 3.5-6 7.5-6s6.9 2 7.5 6" /></svg>
-        </span>
-        <span class="island-tab__label">Account</span>
+      <button class="island-tab mobile-tab mobile-tab--account" data-nav="account" aria-label="Account">
+        <span class="mobile-tab__avatar" id="mobile-tab-avatar" aria-hidden="true">M</span>
       </button>
     </nav>
 
@@ -132,6 +138,10 @@
               <button class="top-menu__item" id="top-flow" role="menuitem" aria-label="Open Flow State" title="Flow State">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5" /></svg>
                 <span>Flow State</span>
+              </button>
+              <button class="top-menu__item" data-nav="stats" role="menuitem" aria-label="Listening Stats" title="Listening Stats">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M8 16v-4M12 16V8M16 16v-7M20 16v-3" /></svg>
+                <span>Listening Stats</span>
               </button>
               <button class="top-menu__item theme-toggle" id="theme-toggle" role="menuitem" aria-label="Toggle dark mode" aria-pressed="false" title="Switch to dark mode">
                 <span class="theme-toggle__glyph" aria-hidden="true">☾</span>
@@ -203,6 +213,7 @@
               </div>
               <div class="shelf-tools">
                 <span class="live-tag"><i></i> LIVE CHART</span>
+                <button class="link-btn" data-action="open-trending-mix">Open chart ↗</button>
                 <button class="rail-arrow" data-rail="trending-now" aria-label="Scroll trending songs">›</button>
               </div>
             </div>
@@ -216,7 +227,7 @@
                 <h2>Albums</h2>
               </div>
               <div class="shelf-tools">
-                <button class="link-btn" data-nav="discover">Discover more ↗</button>
+                <button class="link-btn" data-action="open-album-catalog">Album catalog ↗</button>
                 <button class="rail-arrow" data-rail="albums-all" aria-label="Scroll albums">›</button>
               </div>
             </div>
@@ -230,6 +241,7 @@
                 <h2>Hindi songs</h2>
               </div>
               <div class="shelf-tools">
+                <button class="link-btn" data-action="open-language-mix" data-language="Hindi">Hindi mix ↗</button>
                 <button class="rail-arrow" data-rail="hindi-songs" aria-label="Scroll Hindi songs">›</button>
               </div>
             </div>
@@ -243,6 +255,7 @@
                 <h2>English songs</h2>
               </div>
               <div class="shelf-tools">
+                <button class="link-btn" data-action="open-language-mix" data-language="English">English mix ↗</button>
                 <button class="rail-arrow" data-rail="english-songs" aria-label="Scroll English songs">›</button>
               </div>
             </div>
@@ -390,7 +403,7 @@
                 <button class="btn btn--dark" id="album-play"><span>▶</span> Play album</button>
                 <button class="btn btn--outline" id="album-save">↓ Save album</button>
               </div>
-              <p class="album-note">Read-only collection · the title and cover come from the catalogue.</p>
+              <p class="album-note" id="album-note">Read-only collection · the title and cover come from the catalogue.</p>
             </div>
           </div>
           <div class="song-list song-list--detail" id="album-songs"></div>
@@ -546,9 +559,15 @@
 
           <div class="account-grid">
             <div class="account-card account-card--profile">
-              <div class="account-avatar" id="account-avatar">M</div>
-              <div class="account-card__body">
-                <p class="eyebrow">LOCAL PROFILE</p>
+              <div class="profile-hero">
+                <div class="account-avatar" id="account-avatar">M</div>
+                <div class="profile-hero__copy">
+                  <p class="eyebrow">LOCAL PROFILE</p>
+                  <h2 class="profile-display-name" id="profile-display-name">Music Lover</h2>
+                </div>
+                <button class="btn btn--outline profile-edit" id="profile-edit-toggle" aria-expanded="false" aria-controls="profile-editor">Edit</button>
+              </div>
+              <div class="profile-editor" id="profile-editor" hidden>
                 <label class="field-label" for="profile-name">Display name</label>
                 <div class="field-row">
                   <input type="text" id="profile-name" maxlength="32" placeholder="Your name">
@@ -556,11 +575,18 @@
                 </div>
                 <p class="field-note" id="account-status">Stored on this device only.</p>
                 <div class="picture-actions">
-                  <button class="btn btn--outline" id="choose-avatar">Choose profile picture</button>
+                  <button class="btn btn--outline" id="choose-avatar">Change profile picture</button>
                   <button class="btn btn--danger-ghost" id="remove-avatar" hidden>Remove picture</button>
                 </div>
                 <p class="field-note">Your picture is cropped to a circle. Drag and zoom to frame it.</p>
               </div>
+            </div>
+
+            <div class="account-card account-card--stats-link">
+              <p class="eyebrow">YOUR MONTH IN SOUND</p>
+              <h3>Listening Stats</h3>
+              <p class="field-note">A full-screen, Spotify-style recap of what you played this month.</p>
+              <button class="btn btn--dark" data-nav="stats">Open Listening Stats ↗</button>
             </div>
 
             <div class="account-card">
@@ -604,6 +630,23 @@
                 <div class="soon-item"><span>◎</span><strong>Equaliser</strong><small>Coming soon</small></div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <!-- ---------------- LISTENING STATS / WRAPPED ---------------- -->
+        <section class="page stats-page" id="page-stats" data-page="stats">
+          <button class="back-btn" data-nav="account">← Back to Account</button>
+          <div class="wrapped-shell">
+            <header class="wrapped-top">
+              <div class="wrapped-brand"><span class="wrapped-brand__mark">◈</span> musicVer <span>WRAPPED</span></div>
+              <select id="stats-month" aria-label="Choose a month"></select>
+            </header>
+            <div class="wrapped-stage" id="wrapped-stage" aria-live="polite"></div>
+            <footer class="wrapped-nav">
+              <button class="wrapped-btn wrapped-btn--ghost" id="wrapped-prev" aria-label="Previous slide">← Back</button>
+              <div class="wrapped-dots" id="wrapped-dots" aria-label="Story progress"></div>
+              <button class="wrapped-btn" id="wrapped-next">Next →</button>
+            </footer>
           </div>
         </section>
 
@@ -714,15 +757,15 @@
     <div class="toast-root" id="toast-root" aria-live="polite"></div>
   </div>
 
-  <script src="js/data.js?v=1108"></script>
-  <script src="js/store.js?v=1108"></script>
-  <script src="js/web-seed.js?v=1108"></script>
-  <script src="js/web-jio-catalog.js?v=1108"></script>
-  <script src="js/web-api.js?v=1108"></script>
-  <script src="js/api.js?v=1108"></script>
-  <script src="js/player.js?v=1108"></script>
-  <script src="js/ui.js?v=1108"></script>
-  <script src="js/app.js?v=1108"></script>
+  <script src="js/data.js?v=1113"></script>
+  <script src="js/store.js?v=1113"></script>
+  <script src="js/web-seed.js?v=1113"></script>
+  <script src="js/web-jio-catalog.js?v=1113"></script>
+  <script src="js/web-api.js?v=1113"></script>
+  <script src="js/api.js?v=1113"></script>
+  <script src="js/player.js?v=1113"></script>
+  <script src="js/ui.js?v=1113"></script>
+  <script src="js/app.js?v=1113"></script>
 </body>
 
 </html>

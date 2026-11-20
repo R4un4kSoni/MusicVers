@@ -24,11 +24,23 @@ finished; use its × button to dismiss it.
   The Weeknd's *After Hours*. There is no external video fallback.
 - Likes, saved albums, playlists, playlist covers, profile picture, light/dark
   theme, volume, search history and recently played items.
+- Trending songs and the Hindi/English mixes open a generated 50-song mix page
+  and take you straight to that mix. Album cards open a 50-album catalogue you
+  can keep browsing.
+- Spotify-style **Listening Stats** live in their own tab. Every play is counted
+  locally, and the stats view shows monthly totals, top songs, top artists and
+  total plays in a wrapped-style story you can page through.
+- The Account tab shows your profile picture and name in a classic font, with an
+  Edit button underneath for changing or removing the picture and changing the
+  name. On small screens the bottom tabs show the selected picture instead of
+  the account label, and the mini player is compact like the Spotify app.
 - Flow State, ambient accents and the dynamic island navigation. Pages slide
   past the in-between tabs when you switch, for example Home → Library →
   Discover → Account. The top-right actions are collected in a single three-dot
   menu. On Android and other small screens, the dynamic island is replaced by a
   bottom tab bar, the layout is more compact, and the layout adapts for touch.
+  The Windows app intentionally disables these slide animations; the browser and
+  Android builds keep them.
 - Choose a local music folder (Chrome/Edge) or select local audio files
   (other browsers). Files stay on your device and are never uploaded.
 
@@ -96,7 +108,10 @@ location.reload();
 
 ## Relationship to the Windows release
 
-The Windows release is still available at
-<https://github.com/R4un4kSoni/MusicVers/releases/tag/v1.0.0>. It uses Python,
-pywebview and VLC, and its data is stored in the Windows app's own local files.
-The web build is a separate static deployment under `docs/`.
+The current portable Windows release is
+[v1.1.1](https://github.com/R4un4kSoni/MusicVers/releases/tag/v1.1.1). It is a
+single-file Electron build that needs no installation and removes the page slide
+animations. The earlier
+[v1.1.0](https://github.com/R4un4kSoni/MusicVers/releases/tag/v1.1.0) and
+[v1.0.0](https://github.com/R4un4kSoni/MusicVers/releases/tag/v1.0.0) releases
+are left unchanged. The web build is a separate static deployment under `docs/`.
