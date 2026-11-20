@@ -87,5 +87,5 @@ showing the available keys.
 
 See
 [BUILD-WINDOWS.md](https://github.com/R4un4kSoni/MusicVers/blob/main/docs/BUILD-WINDOWS.md)
-for the exact PyInstaller commands, or use the GitHub Actions workflow in
-`.github/workflows/build-windows.yml` to produce the same release assets.
+for the exact PyInstaller commands, or run `packaging\windows\build.bat` on a
+Windows machine to reproduce the same release assets.

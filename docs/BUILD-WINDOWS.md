@@ -31,13 +31,13 @@ The finished file is `dist\MusicVer.exe`.
 ## Publishing a new release
 
 After building, upload `dist\MusicVer.exe` to a GitHub release for the version
-tag. A ZIP containing the exe, `docs/WINDOWS-GUIDE.md`,
-`docs/THIRD-PARTY-NOTICES.md` and `requirements.txt` is also published so users
-get the guide with the download.
+tag. A ZIP containing the exe, `docs/WINDOWS-GUIDE.md` and
+`docs/THIRD-PARTY-NOTICES.md` is also published so users get the guide with the
+download.
 
 ## Notes for maintainers
 
-- Keep `requirements.txt` pinned; the workflow installs it verbatim.
+- Keep `requirements.txt` pinned; `build.bat` installs it verbatim.
 - The spec bundles only `f-3/` (the default interface). Legacy frontends are
   intentionally excluded from the download.
 - User data is written to `%APPDATA%\MusicVer`, not beside the exe.
