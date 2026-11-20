@@ -12,6 +12,7 @@
   'use strict';
 
   const DEFAULT_API = 'https://saavn.sumit.co/api';
+  const ITUNES_API = 'https://itunes.apple.com';
   const API_BASE_KEY = 'musicver.web.apiBase';
   const CACHE_KEY = 'musicver.web.cache.v1';
   const DISCOVERY_KEY = 'musicver.web.discovery.v1';
@@ -152,21 +153,113 @@
     };
   }
 
-  function seedTracks() {
-    return (MV.webSeed || []).map((item) => ({
-      id: String(item.id),
-      title: decode(item.title),
-      artist: decode(item.artist),
-      album: decode(item.album),
-      duration: String(item.duration || 0),
-      language: item.language || '',
-      provider: 'jiosaavn',
-      path: 'stream:jiosaavn:' + item.id,
-      cover: item.cover || '',
-      image: item.cover || '',
-      downloadUrl: item.stream ? [{ quality: '160kbps', url: item.stream }] : [],
+  /* iTunes fills the gaps in JioSaavn's regional catalogue for international
+     artists. Its previews are 30 seconds, but they are real, CORS-enabled
+     audio and make mainstream searches useful in a static browser build. */
+
+  function itunesArtwork(url, size) {
+    if (!url) return '';
+    return String(url).replace(/\d+x\d+bb\.(jpg|png|jpeg)$/i, (size || 600) + 'x' + (size || 600) + 'bb.$1');
+  }
+
+  function toItunesTrackRaw(item) {
+    if (!item || !item.previewUrl) return null;
+    const id = 'itunes-' + String(item.trackId || hash((item.trackName || '') + (item.artistName || '')));
+    const cover = itunesArtwork(item.artworkUrl100 || item.artworkUrl60);
+    streamCache.set(id, [item.previewUrl]);
+    return {
+      id: id,
+      title: decode(item.trackName || item.title || 'Unknown title'),
+      artist: decode(item.artistName || 'Unknown artist'),
+      album: decode(item.collectionName || 'Unknown album'),
+      duration: String(Math.round((item.trackTimeMillis || 0) / 1000)),
+      language: item.primaryGenreName || '',
+      provider: 'itunes',
+      path: 'stream:itunes:' + id,
+      cover: cover,
+      image: cover,
+      downloadUrl: [{ quality: 'preview', url: item.previewUrl }],
       raw: item
-    }));
+    };
+  }
+
+  function toItunesArtistRaw(item) {
+    if (!item) return null;
+    const id = 'itunes-artist-' + String(item.artistId || hash(item.artistName || 'Unknown artist'));
+    const name = decode(item.artistName || item.name || 'Unknown artist');
+    const cover = itunesArtwork(item.artworkUrl100 || item.artworkUrl60 || item.cover);
+    return {
+      id: id,
+      name: name,
+      title: name,
+      kind: 'artist',
+      listeners: null,
+      token: '',
+      image: cover,
+      cover: cover,
+      raw: item
+    };
+  }
+
+  function toItunesAlbumRaw(item) {
+    if (!item || !item.collectionName) return null;
+    const id = 'itunes-album-' + String(item.collectionId || hash(item.collectionName + (item.artistName || '')));
+    const cover = itunesArtwork(item.artworkUrl100 || item.artworkUrl60);
+    return {
+      id: id,
+      title: decode(item.collectionName),
+      artist: decode(item.artistName || 'Unknown artist'),
+      year: String(item.releaseDate || '').slice(0, 4),
+      language: '',
+      track_count: item.trackCount || null,
+      token: '',
+      image: cover,
+      cover: cover,
+      raw: item
+    };
+  }
+
+  async function itunesSearchSongs(query, limit) {
+    const data = await itunesFetch('/search?term=' + encodeURIComponent(query) +
+      '&entity=song&country=US&limit=' + (Number(limit) || 20));
+    return (data && Array.isArray(data.results) ? data.results : [])
+      .map(toItunesTrackRaw).filter(Boolean);
+  }
+
+  async function itunesSearchArtists(query, limit) {
+    const data = await itunesFetch('/search?term=' + encodeURIComponent(query) +
+      '&entity=musicArtist&country=US&limit=' + (Number(limit) || 10));
+    return (data && Array.isArray(data.results) ? data.results : [])
+      .map(toItunesArtistRaw).filter(Boolean);
+  }
+
+  async function itunesLookup(id, entity) {
+    const data = await itunesFetch('/lookup?id=' + encodeURIComponent(id) +
+      '&entity=' + encodeURIComponent(entity || 'song') + '&country=US&limit=200');
+    return data && Array.isArray(data.results) ? data.results : [];
+  }
+
+  function seedTracks() {
+    return (MV.webSeed || []).map((item) => {
+      const provider = item.provider || (String(item.id).indexOf('itunes-') === 0 ? 'itunes' : 'jiosaavn');
+      const id = String(item.id);
+      const stream = item.stream || '';
+      if (stream) streamCache.set(id, [stream]);
+      return {
+        id: id,
+        title: decode(item.title),
+        artist: decode(item.artist),
+        album: decode(item.album),
+        duration: String(item.duration || 0),
+        language: item.language || '',
+        provider: provider,
+        path: item.path || ('stream:' + provider + ':' + id),
+        cover: item.cover || '',
+        image: item.cover || '',
+        downloadUrl: stream ? [{ quality: provider === 'itunes' ? 'preview' : '160kbps', url: stream }] : [],
+        raw: Object.assign({ provider: provider }, item)
+      };
+    });
   }
 
   function cachedTracks() {
@@ -175,6 +268,7 @@
       const item = cache[id];
       const streams = Array.isArray(item.streams) ? item.streams : (item.stream ? [item.stream] : []);
       if (streams.length) streamCache.set(id, streams);
+      const provider = item.provider || (id.indexOf('itunes-') === 0 ? 'itunes' : 'jiosaavn');
       return {
         id: id,
         title: item.title || id,
@@ -182,8 +276,8 @@
         album: item.album || 'Offline cache',
         duration: String(item.duration || 0),
         language: item.language || '',
-        provider: 'jiosaavn',
-        path: 'stream:jiosaavn:' + id,
+        provider: provider,
+        path: item.path || ('stream:' + provider + ':' + id),
         cover: item.cover || '',
         image: item.cover || '',
         downloadUrl: streams.map((url) => ({ url: url })),
@@ -204,6 +298,8 @@
         album: song.album,
         duration: song.duration,
         language: song.language,
+        provider: song.provider || 'jiosaavn',
+        path: song.path || '',
         cover: song.cover,
         streams: streams || [],
         savedAt: Date.now()
@@ -230,21 +326,73 @@
     return ranked.filter((url, index) => ranked.indexOf(url) === index);
   }
 
+  function dedupeById(list) {
+    const seen = new Set();
+    return (list || []).filter((item) => {
+      const key = String(item && item.id);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function rankTracks(tracks, query) {
+    const needle = String(query || '').trim().toLowerCase();
+    if (!needle) return tracks;
+    return tracks.map((track, index) => {
+      const title = String(track.title || '').toLowerCase();
+      const artist = String(track.artist || '').toLowerCase();
+      let score = 0;
+      if (artist === needle) score = track.provider === 'itunes' ? 5 : 4;
+      else if (title === needle) score = 3;
+      else if (artist.indexOf(needle) >= 0 || title.indexOf(needle) >= 0) score = 2;
+      else if (needle.split(/\s+/).some((part) => part && (artist.indexOf(part) >= 0 || title.indexOf(part) >= 0))) score = 1;
+      return { track, score, index };
+    }).sort((a, b) => b.score - a.score || a.index - b.index).map((entry) => entry.track);
+  }
+
+  function rankArtists(artists, query) {
+    const needle = String(query || '').trim().toLowerCase();
+    if (!needle) return artists;
+    return artists.map((artist, index) => {
+      const name = String(artist.name || artist.title || '').toLowerCase();
+      let score = 0;
+      if (name === needle) score = String(artist.id).indexOf('itunes-') === 0 ? 5 : 4;
+      else if (name.indexOf(needle) === 0) score = 3;
+      else if (name.indexOf(needle) >= 0) score = 2;
+      else if (needle.split(/\s+/).some((part) => part && name.indexOf(part) >= 0)) score = 1;
+      return { artist, score, index };
+    }).sort((a, b) => b.score - a.score || a.index - b.index).map((entry) => entry.artist);
+  }
+
+  function interleave(first, second) {
+    const result = [];
+    const max = Math.max(first.length, second.length);
+    for (let i = 0; i < max; i += 1) {
+      if (i < first.length) result.push(first[i]);
+      if (i < second.length) result.push(second[i]);
+    }
+    return result;
+  }
+
   /* ---------------- network ---------------- */
 
-  async function apiFetch(path) {
+  async function fetchJson(base, path) {
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = controller ? setTimeout(() => controller.abort(), 15000) : null;
     try {
       const options = { cache: 'no-store', headers: { Accept: 'application/json' } };
       if (controller) options.signal = controller.signal;
-      const response = await fetch(apiBase + path, options);
+      const response = await fetch(base + path, options);
       if (!response.ok) throw new Error('HTTP ' + response.status);
       return await response.json();
     } finally {
       if (timer) clearTimeout(timer);
     }
   }
+
+  function apiFetch(path) { return fetchJson(apiBase, path); }
+  function itunesFetch(path) { return fetchJson(ITUNES_API, path); }
 
   function resultsOf(container) {
     return (container && Array.isArray(container.results)) ? container.results : [];
@@ -348,6 +496,40 @@
     try {
       await startPlayback(urls);
       return { success: true, source: apiBase };
+    } catch (error) {
+      playbackState = 'paused';
+      return { success: false, message: 'Playback was blocked — click play again.' };
+    }
+  }
+
+  async function playItunes(id) {
+    const key = String(id || '');
+    const rawId = key.replace(/^itunes-/, '');
+    let urls = streamCache.get(key);
+    if (!urls || !urls.length) {
+      try {
+        const items = await itunesLookup(rawId, 'song');
+        const item = items.find((entry) => String(entry.trackId) === rawId);
+        if (!item || !item.previewUrl) {
+          return { success: false, message: 'This preview is no longer available.' };
+        }
+        currentTrack = toItunesTrackRaw(item);
+        urls = [item.previewUrl];
+      } catch (error) {
+        const all = seedTracks().concat(cachedTracks());
+        currentTrack = all.find((item) => String(item.id) === key) || null;
+        urls = currentTrack && streamCache.get(key);
+      }
+    }
+    if (!urls || !urls.length) {
+      return { success: false, message: 'This preview is no longer available.' };
+    }
+    if (!currentTrack) {
+      currentTrack = seedTracks().concat(cachedTracks()).find((item) => String(item.id) === key) || null;
+    }
+    try {
+      await startPlayback(urls);
+      return { success: true, source: 'itunes', preview: true };
     } catch (error) {
       playbackState = 'paused';
       return { success: false, message: 'Playback was blocked — click play again.' };
@@ -544,41 +726,42 @@
       }
 
       const queries = ['top hindi songs', 'bollywood hits', 'arijit singh', 'romantic hindi', 'english hits'];
-      const settled = await Promise.allSettled(queries.map(searchCatalogue));
-      const bundles = settled.filter((item) => item.status === 'fulfilled').map((item) => item.value);
-      let songs = [];
-      let albums = [];
-      let artists = [];
-      bundles.forEach((bundle) => {
-        songs = songs.concat(bundle.songs);
-        albums = albums.concat(bundle.albums);
-        artists = artists.concat(bundle.artists);
+      const mainstreamQueries = ['Joji', 'The Weeknd', 'Billie Eilish', 'Taylor Swift', 'Imagine Dragons', 'Ed Sheeran'];
+      const [jioSettled, itunesSettled] = await Promise.all([
+        Promise.allSettled(queries.map(searchCatalogue)),
+        Promise.allSettled(mainstreamQueries.map((name) => itunesSearchSongs(name, 8)))
+      ]);
+
+      let jioSongs = [];
+      let jioAlbums = [];
+      let jioArtists = [];
+      jioSettled.filter((item) => item.status === 'fulfilled').forEach((item) => {
+        jioSongs = jioSongs.concat(item.value.songs);
+        jioAlbums = jioAlbums.concat(item.value.albums);
+        jioArtists = jioArtists.concat(item.value.artists);
       });
 
-      const dedupe = (list) => {
-        const seen = new Set();
-        return list.filter((item) => {
-          const key = String(item && item.id);
-          if (!key || seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-      };
-      songs = dedupe(songs);
-      albums = dedupe(albums);
-      artists = dedupe(artists);
+      let itunesSongs = [];
+      itunesSettled.filter((item) => item.status === 'fulfilled').forEach((item) => {
+        itunesSongs = itunesSongs.concat(item.value);
+      });
+      const sourceItems = itunesSongs.slice(0, 40).map((track) => track.raw).filter(Boolean);
+      const mainstreamArtists = sourceItems.map((item) => toItunesArtistRaw(item)).filter(Boolean);
+      const mainstreamAlbums = sourceItems.map((item) => toItunesAlbumRaw(item)).filter(Boolean);
+
+      let songs = interleave(dedupeById(jioSongs), dedupeById(itunesSongs));
+      const albums = dedupeById(jioAlbums.concat(mainstreamAlbums));
+      const artists = dedupeById(jioArtists.concat(mainstreamArtists));
 
       if (!songs.length) {
         songs = seedTracks().concat(cachedTracks());
-        albums = [];
-        artists = [];
       }
       const result = {
         success: true,
-        trending: songs.slice(0, 18),
+        trending: songs.slice(0, 24),
         albums: albums.slice(0, 12),
-        artists: artists.slice(0, 10),
-        charts: albums.slice(12, 24),
+        artists: artists.slice(0, 12),
+        charts: dedupeById(mainstreamAlbums).slice(0, 12),
         genres: MV.data.genres || []
       };
       write(DISCOVERY_KEY, JSON.stringify({ ...result, savedAt: Date.now() }));
@@ -586,10 +769,33 @@
     },
 
     async search_online_music(query) {
+      const needle = String(query || '').trim();
+      if (!needle) return { success: true, results: [], albums: [], artists: [], source: 'online' };
       try {
-        const found = await searchCatalogue(query);
-        return { success: true, results: found.songs, albums: found.albums, artists: found.artists,
-          source: 'online' };
+        const [jioResult, songResult, artistResult] = await Promise.allSettled([
+          searchCatalogue(needle),
+          itunesSearchSongs(needle, 20),
+          itunesSearchArtists(needle, 10)
+        ]);
+        const jio = jioResult.status === 'fulfilled'
+          ? jioResult.value : { songs: [], albums: [], artists: [] };
+        const itunesSongs = songResult.status === 'fulfilled' ? songResult.value : [];
+        const itunesArtists = artistResult.status === 'fulfilled' ? artistResult.value : [];
+        const songArtists = itunesSongs.slice(0, 8)
+          .map((track) => toItunesArtistRaw(track.raw)).filter(Boolean);
+
+        const songs = rankTracks(dedupeById(jio.songs.concat(itunesSongs)), needle).slice(0, 40);
+        const artists = rankArtists(dedupeById(jio.artists.concat(itunesArtists, songArtists)), needle).slice(0, 12);
+        const albums = dedupeById(jio.albums).slice(0, 12);
+        rememberStreams(songs);
+        return {
+          success: true,
+          results: songs,
+          albums: albums,
+          artists: artists,
+          source: 'online',
+          offline: false
+        };
       } catch (error) {
         const local = localMatches(query);
         return { success: true, results: local.songs, albums: local.albums, artists: local.artists,
@@ -598,6 +804,19 @@
     },
 
     async get_jiosaavn_album(id) {
+      const albumId = String(id || '');
+      if (albumId.indexOf('itunes-album-') === 0) {
+        try {
+          const rawId = albumId.replace(/^itunes-album-/, '');
+          const items = await itunesLookup(rawId, 'song');
+          const tracks = items.filter((entry) => entry.wrapperType === 'track' &&
+            String(entry.collectionId) === rawId).map(toItunesTrackRaw).filter(Boolean);
+          rememberStreams(tracks);
+          return { success: true, tracks: tracks };
+        } catch (error) {
+          return { success: true, tracks: [] };
+        }
+      }
       try {
         const data = await apiFetch('/albums?id=' + encodeURIComponent(id));
         const album = data && data.data ? data.data : {};
@@ -611,6 +830,40 @@
     },
 
     async get_jiosaavn_artist(id, page, limit, section) {
+      const rawArtistId = String(id || '');
+      if (rawArtistId.indexOf('itunes-artist-') === 0) {
+        try {
+          const rawId = rawArtistId.replace(/^itunes-artist-/, '');
+          const items = await itunesLookup(rawId, 'song');
+          const own = items.filter((entry) => entry.wrapperType === 'track' &&
+            String(entry.artistId) === rawId);
+          const tracks = own.map(toItunesTrackRaw).filter(Boolean);
+          rememberStreams(tracks);
+          if (section === 'songs') {
+            const size = Number(limit) || 20;
+            const start = (Number(page) || 0) * size;
+            return { success: true, songs: tracks.slice(start, start + size) };
+          }
+          const source = own[0] || { artistId: Number(rawId), artistName: 'Artist' };
+          return {
+            success: true,
+            artist: toItunesArtistRaw(source),
+            songs: tracks.slice(0, 20),
+            albums: dedupeById(own.map((item) => toItunesAlbumRaw(item)).filter(Boolean)),
+            singles: [],
+            similar_artists: [],
+            playlists: [],
+            bio: '',
+            source_url: source.artistViewUrl || ''
+          };
+        } catch (error) {
+          const local = localMatches('');
+          return { success: true, artist: { id: rawArtistId, name: 'Artist', title: 'Artist', kind: 'artist',
+            cover: MV.data.coverFor(rawArtistId, 'Artist', true) }, songs: local.songs.slice(0, 8),
+            albums: [], singles: [], similar_artists: [], playlists: [], bio: '', source_url: '' };
+        }
+      }
+
       const artistId = encodeURIComponent(id);
       try {
         if (section === 'songs') {
@@ -651,7 +904,10 @@
     },
 
     play_jiosaavn_track: playJioSaavn,
-    play_provider_track: playJioSaavn,
+    play_provider_track(id) {
+      if (String(id || '').indexOf('itunes-') === 0) return playItunes(id);
+      return playJioSaavn(id);
+    },
     play_song: playLocal,
 
     pause_song() {

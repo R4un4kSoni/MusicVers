@@ -10,7 +10,9 @@
     "duration": "268",
     "language": "hindi",
     "cover": "https://c.saavncdn.com/871/Brahmastra-Original-Motion-Picture-Soundtrack-Hindi-2022-20221006155213-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/871/c2febd353f3a076a406fa37510f31f9f_160.mp4"
+    "stream": "https://aac.saavncdn.com/871/c2febd353f3a076a406fa37510f31f9f_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:rjkrTnma"
   },
   {
     "id": "Bt07_OpM",
@@ -20,7 +22,9 @@
     "duration": "261",
     "language": "hindi",
     "cover": "https://c.saavncdn.com/840/Best-Of-Arijit-Singh-Collection-Of-Romantic-Songs-Hindi-2025-20251203161112-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/840/c9e70fb62d66fa6e14f6b7cdbc56cc05_160.mp4"
+    "stream": "https://aac.saavncdn.com/840/c9e70fb62d66fa6e14f6b7cdbc56cc05_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:Bt07_OpM"
   },
   {
     "id": "gjo5uFWq",
@@ -30,7 +34,9 @@
     "duration": "144",
     "language": "english",
     "cover": "https://c.saavncdn.com/429/Shape-of-You-English-2025-20251023152603-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/429/48735711a42b19d7dd4eb6346d26e7fa_160.mp4"
+    "stream": "https://aac.saavncdn.com/429/48735711a42b19d7dd4eb6346d26e7fa_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:gjo5uFWq"
   },
   {
     "id": "KDE5GjMh",
@@ -40,7 +46,9 @@
     "duration": "203",
     "language": "instrumental",
     "cover": "https://c.saavncdn.com/512/ZZang-KARAOKE-Greatest-POP-Vol-6-Instrumental-2024-20260805033619-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/512/3b749a4d01961fa0b7b1dbf8f86a4c8d_160.mp4"
+    "stream": "https://aac.saavncdn.com/512/3b749a4d01961fa0b7b1dbf8f86a4c8d_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:KDE5GjMh"
   },
   {
     "id": "oemj5iht",
@@ -50,7 +58,9 @@
     "duration": "273",
     "language": "telugu",
     "cover": "https://c.saavncdn.com/129/A-R-Rahman-Tollywood-Superhits-Telugu-2026-20260106191102-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/129/971e0f2186465e4a25d6a1eafdecb746_160.mp4"
+    "stream": "https://aac.saavncdn.com/129/971e0f2186465e4a25d6a1eafdecb746_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:oemj5iht"
   },
   {
     "id": "Wn_eONzu",
@@ -60,7 +70,9 @@
     "duration": "244",
     "language": "hindi",
     "cover": "https://c.saavncdn.com/603/Agent-Vinod-2012-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/603/40a507a84a1045c70af28f1fc79384bf_160.mp4"
+    "stream": "https://aac.saavncdn.com/603/40a507a84a1045c70af28f1fc79384bf_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:Wn_eONzu"
   },
   {
     "id": "SH2T3VSx",
@@ -70,7 +82,9 @@
     "duration": "406",
     "language": "hindi",
     "cover": "https://c.saavncdn.com/466/A-R-Rahman-the-Music-Maestro-of-Bollywood-Hindi-2016-20260331205724-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/466/5bf35e00b4c1623e67670f2f21d3e20b_160.mp4"
+    "stream": "https://aac.saavncdn.com/466/5bf35e00b4c1623e67670f2f21d3e20b_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:SH2T3VSx"
   },
   {
     "id": "st2Dycrf",
@@ -80,7 +94,9 @@
     "duration": "345",
     "language": "hindi",
     "cover": "https://c.saavncdn.com/297/Dilwale-Hindi-2015-20260120201359-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/297/73b17eaff28c9857ae8a5371726c208c_160.mp4"
+    "stream": "https://aac.saavncdn.com/297/73b17eaff28c9857ae8a5371726c208c_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:st2Dycrf"
   },
   {
     "id": "2xkMWoxv",
@@ -90,7 +106,9 @@
     "duration": "210",
     "language": "hindi",
     "cover": "https://c.saavncdn.com/719/Sarkar-Hindi-2005-20221205012258-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/719/8dc9e8ad79328d9b16638f1318a0acc2_160.mp4"
+    "stream": "https://aac.saavncdn.com/719/8dc9e8ad79328d9b16638f1318a0acc2_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:2xkMWoxv"
   },
   {
     "id": "VXEssg-w",
@@ -100,7 +118,9 @@
     "duration": "300",
     "language": "hindi",
     "cover": "https://c.saavncdn.com/876/Jai-Ho-2013-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/876/75cccaab15b169430d140fc4c34b34b4_160.mp4"
+    "stream": "https://aac.saavncdn.com/876/75cccaab15b169430d140fc4c34b34b4_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:VXEssg-w"
   },
   {
     "id": "uEs8oFrn",
@@ -110,7 +130,9 @@
     "duration": "187",
     "language": "instrumental",
     "cover": "https://c.saavncdn.com/495/Let-Her-Go-Sped-Up-Instrumental-2023-20230609112219-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/495/609e867fa4a68313e037a06d3a6516bd_160.mp4"
+    "stream": "https://aac.saavncdn.com/495/609e867fa4a68313e037a06d3a6516bd_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:uEs8oFrn"
   },
   {
     "id": "IBl9EHIp",
@@ -120,7 +142,177 @@
     "duration": "260",
     "language": "instrumental",
     "cover": "https://c.saavncdn.com/703/Perfect-Instrumental-2026-20260622213718-500x500.jpg",
-    "stream": "https://aac.saavncdn.com/703/cc0abaa6ff7a543587aa9f7ee9d5c1da_160.mp4"
+    "stream": "https://aac.saavncdn.com/703/cc0abaa6ff7a543587aa9f7ee9d5c1da_160.mp4",
+    "provider": "jiosaavn",
+    "path": "stream:jiosaavn:IBl9EHIp"
+  },
+  {
+    "id": "itunes-1776748883",
+    "title": "Glimpse of Us",
+    "artist": "Joji",
+    "album": "SMITHEREENS",
+    "duration": "233",
+    "language": "Pop",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1776748883",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/d0/2a/43/d02a433a-3ab8-9a94-b07d-1dc599b64966/93624864387.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/0c/53/c2/0c53c240-300a-5ddf-fc86-3a54e1b73a78/mzaf_13555682862214742934.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-6836327391",
+    "title": "SLOW DANCING IN THE DARK",
+    "artist": "Joji",
+    "album": "BALLADS 1",
+    "duration": "179",
+    "language": "R&B/Soul",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-6836327391",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/10/94/bc/1094bcd8-7c1d-e9ba-567e-35040bb01f6f/190296925382_Cover.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/ae/97/5e/ae975e1e-9785-6d99-d43b-e6e11e71ecb2/mzaf_9184266047040550032.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1499378607",
+    "title": "Blinding Lights",
+    "artist": "The Weeknd",
+    "album": "After Hours",
+    "duration": "200",
+    "language": "R&B/Soul",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1499378607",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/6f/bc/e6/6fbce6c4-c38c-72d8-4fd0-66cfff32f679/20UMGIM12176.rgb.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/19/d6/60/19d660ff-e3a9-8377-15a3-ce4b28e89cac/mzaf_18422426156481158187.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1440870375",
+    "title": "Starboy (feat. Daft Punk)",
+    "artist": "The Weeknd",
+    "album": "Starboy",
+    "duration": "230",
+    "language": "R&B/Soul",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1440870375",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/b5/92/bb/b592bb72-52e3-e756-9b26-9f56d08f47ab/16UMGIM67864.rgb.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/11/71/d6/1171d6ad-3c96-e027-2af6-58028426588c/mzaf_15137631797407745471.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1450695739",
+    "title": "bad guy",
+    "artist": "Billie Eilish",
+    "album": "WHEN WE ALL FALL ASLEEP, WHERE DO WE GO?",
+    "duration": "194",
+    "language": "Alternative",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1450695739",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/1a/37/d1/1a37d1b1-8508-54f2-f541-bf4e437dda76/19UMGIM05028.rgb.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/c3/87/1f/c3871f7e-3260-d615-1c66-5fdca2c3a48f/mzaf_10721331211699880949.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1440899467",
+    "title": "ocean eyes",
+    "artist": "Billie Eilish",
+    "album": "dont smile at me",
+    "duration": "200",
+    "language": "Alternative",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1440899467",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/02/1d/30/021d3036-5503-3ed3-df00-882f2833a6ae/17UM1IM17026.rgb.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/d6/59/2b/d6592b0b-1e7e-4743-b2e4-f2af038fd783/mzaf_7697277787797935735.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1440933517",
+    "title": "Blank Space",
+    "artist": "Taylor Swift",
+    "album": "1989 (Deluxe Edition)",
+    "duration": "232",
+    "language": "Pop",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1440933517",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/a7/98/d8/a798d867-344d-2bf2-fbfe-d2d1412dcef8/14UMDIM03793.rgb.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/79/55/b1/7955b10c-6cb6-462a-861c-8e5cbcacfb76/mzaf_3395570742482345989.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1440933651",
+    "title": "Shake It Off",
+    "artist": "Taylor Swift",
+    "album": "1989 (Deluxe Edition)",
+    "duration": "219",
+    "language": "Pop",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1440933651",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/a7/98/d8/a798d867-344d-2bf2-fbfe-d2d1412dcef8/14UMDIM03793.rgb.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/11/d5/6d/11d56d4a-ce23-e793-8681-70dc4d35d931/mzaf_5886436202259848624.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1411628233",
+    "title": "Believer",
+    "artist": "Imagine Dragons",
+    "album": "Evolve",
+    "duration": "204",
+    "language": "Alternative",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1411628233",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/11/7a/b8/117ab805-6811-8929-18b9-0fad7baf0c25/17UMGIM98210.rgb.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/c0/3f/36/c03f367a-b66b-fd0a-a54c-30f8250c4410/mzaf_12768434238801682952.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1440873126",
+    "title": "Radioactive",
+    "artist": "Imagine Dragons",
+    "album": "Night Visions",
+    "duration": "187",
+    "language": "Alternative",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1440873126",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/1f/fa/09/1ffa092f-f52f-4a66-7d10-4cc5982dc747/12UMGIM46901.rgb.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/77/70/88/777088e9-60a1-c459-bfa5-6e66f2fd2695/mzaf_7685408661765681881.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1193701392",
+    "title": "Shape of You",
+    "artist": "Ed Sheeran",
+    "album": "÷ (Deluxe)",
+    "duration": "234",
+    "language": "Pop",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1193701392",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/15/e6/e8/15e6e8a4-4190-6a8b-86c3-ab4a51b88288/190295851286.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/44/c7/4f/44c74f0d-72dc-6143-d4d0-ba14d661ca0d/mzaf_9566898362556366703.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1193701400",
+    "title": "Perfect",
+    "artist": "Ed Sheeran",
+    "album": "÷ (Deluxe)",
+    "duration": "263",
+    "language": "Pop",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1193701400",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/15/e6/e8/15e6e8a4-4190-6a8b-86c3-ab4a51b88288/190295851286.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/c7/ba/bc/c7babc66-f598-aaa6-bcf6-307281795817/mzaf_16337361235117168274.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1538003843",
+    "title": "Levitating",
+    "artist": "Dua Lipa",
+    "album": "Future Nostalgia",
+    "duration": "204",
+    "language": "Pop",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1538003843",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/6c/11/d6/6c11d681-aa3a-d59e-4c2e-f77e181026ab/190295092665.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview211/v4/59/dc/4d/59dc4dda-93ff-8f1c-c536-f005f6ea6af5/mzaf_3066686759813252385.plus.aac.p.m4a"
+  },
+  {
+    "id": "itunes-1477880561",
+    "title": "Circles",
+    "artist": "Post Malone",
+    "album": "Hollywood's Bleeding",
+    "duration": "215",
+    "language": "Hip-Hop/Rap",
+    "provider": "itunes",
+    "path": "stream:itunes:itunes-1477880561",
+    "cover": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/7b/1b/1b/7b1b1b0b-7ce2-b223-f9e0-8e36abe51877/19UMGIM78325.rgb.jpg/600x600bb.jpg",
+    "stream": "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview221/v4/f9/b1/aa/f9b1aaed-3e24-227f-153d-99969f8b8464/mzaf_6272498007975402144.plus.aac.p.m4a"
   }
 ];
 })(window.MV = window.MV || {});

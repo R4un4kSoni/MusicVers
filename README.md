@@ -56,9 +56,11 @@ A static browser build is published with GitHub Pages:
 
 It includes the full musicVer interface, real in-browser streaming, local music
 file/folder access, playlists, likes, saved albums, profile picture, theme and
-history. Account data is saved locally in the browser; there is no login and no
-server-side account store. The Windows app and the web app keep separate
-libraries.
+history. Search covers both JioSaavn and Apple Music, so international artists
+such as Joji appear alongside Hindi catalogue results; international tracks use
+official 30-second Apple Music previews. Account data is saved locally in the
+browser; there is no login and no server-side account store. The Windows app and
+the web app keep separate libraries.
 
 The web build lives in [`docs/`](docs/) and is deployed directly from `main`.
 See [`docs/WEB-GUIDE.md`](docs/WEB-GUIDE.md) for browser support, local-data

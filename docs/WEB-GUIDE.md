@@ -9,11 +9,15 @@ the browser. No Python, VLC, or server account is required.
 
 ## What works on the web
 
-- Browse live JioSaavn catalogue data: trending songs, albums, artists, charts
-  and genre chips.
-- Search songs, albums and artists, then open artist and album pages.
+- Browse live catalogue data from JioSaavn and Apple Music: trending songs,
+  albums, artists, charts and genre chips.
+- Search songs, albums and artists — including international/mainstream artists
+  such as Joji, The Weeknd, Billie Eilish and Taylor Swift — then open artist
+  and album pages.
 - Stream real audio directly in the browser with play/pause, seek, volume,
-  queue, shuffle, repeat and auto-advance.
+  queue, shuffle, repeat and auto-advance. JioSaavn tracks play in full where
+  available; international tracks use official Apple Music **30-second
+  previews** because full streaming is region/licence restricted.
 - Likes, saved albums, playlists, playlist covers, profile picture, light/dark
   theme, volume, search history and recently played items.
 - Flow State, ambient accents and the dynamic island navigation.
@@ -48,10 +52,11 @@ without VLC. If a stream is blocked by the provider, the player tries the next
 available quality and then falls back to cached or bundled demo tracks.
 
 A small bundled catalogue is included as an offline fallback. Live catalogue
-and audio require an internet connection and depend on the unofficial
-`saavn.sumit.co` JioSaavn mirror. That service can disappear or rate-limit
-without notice; this project is a portfolio demo, not a commercial streaming
-service.
+and audio require an internet connection. JioSaavn data comes from the
+unofficial `saavn.sumit.co` mirror, while international/mainstream results come
+from Apple Music's public iTunes Search API. Both services can change or
+rate-limit without notice; this project is a portfolio demo, not a commercial
+streaming service. Apple Music previews are intentionally limited to 30 seconds.
 
 ## Browser support
 
