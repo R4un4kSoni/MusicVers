@@ -2,7 +2,7 @@
    musicVer · static web bridge
    Replaces the Python/pywebview engine on GitHub Pages.
 
-   - live catalogue: JioSaavn-compatible APIs + itunes.apple.com (CORS-enabled)
+   - live catalogue: JioSaavn-compatible APIs + itunes.apple.com (JSONP)
    - full mainstream audio: JioSaavn original streams resolved at runtime
    - static ID map: fast fallback for popular tracks and whole albums
    - all audio: direct aac.saavncdn.com streams via HTMLAudioElement
@@ -680,7 +680,13 @@
       }
     }
     rememberStreams([currentTrack]);
-    await startPlayback(resolved.urls, token);
+    try {
+      await startPlayback(resolved.urls, token);
+    } catch (error) {
+      if (token !== playRequestId) return { success: false, stale: true };
+      playbackState = 'paused';
+      return { success: false, message: 'No full-length stream found for this song.' };
+    }
     if (token !== playRequestId) return { success: false, stale: true };
     return { success: true, source: 'jiosaavn', full: true };
   }
@@ -805,6 +811,7 @@
 
   async function playSpotify(id) {
     const token = ++playRequestId;
+    playbackState = 'loading';
     let meta = spotifyTrackMeta(id);
     // Imported playlists are stored locally without provider raw payloads.
     // Re-fetching the Spotify track keeps playback available after a reload.
@@ -986,7 +993,75 @@
   }
 
   function apiFetch(path) { return fetchJson(apiBase, path); }
-  function itunesFetch(path) { return fetchJson(ITUNES_API, path); }
+
+  /* Apple's Search API does not send CORS headers to GitHub Pages, so a plain
+     fetch() always fails in the browser. JSONP is the officially supported
+     browser form of this endpoint. Requests are cached and lightly throttled
+     to stay well below Apple's rate limit. */
+  const itunesRequestCache = new Map();
+  const ITUNES_MAX_PARALLEL = 3;
+  let itunesActive = 0;
+  let itunesCallbackId = 0;
+  const itunesWaiters = [];
+
+  function itunesSlot() {
+    return new Promise((resolve) => {
+      if (itunesActive < ITUNES_MAX_PARALLEL) {
+        itunesActive += 1;
+        resolve();
+      } else {
+        itunesWaiters.push(resolve);
+      }
+    });
+  }
+
+  function itunesRelease() {
+    const next = itunesWaiters.shift();
+    if (next) next();
+    else itunesActive -= 1;
+  }
+
+  function itunesJsonp(path) {
+    const callback = 'mvItunes' + (++itunesCallbackId) + '_' + Math.random().toString(36).slice(2, 8);
+    const url = ITUNES_API + path + (path.indexOf('?') >= 0 ? '&' : '?') +
+      'callback=' + encodeURIComponent(callback);
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      let timer = null;
+      let settled = false;
+
+      const finish = (error, data) => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        try { delete window[callback]; } catch (ignored) { window[callback] = undefined; }
+        if (script.parentNode) script.parentNode.removeChild(script);
+        if (error) reject(error);
+        else resolve(data);
+      };
+
+      window[callback] = (data) => finish(null, data);
+      script.onerror = () => finish(new Error('iTunes request failed.'));
+      script.src = url;
+      script.async = true;
+      timer = setTimeout(() => finish(new Error('iTunes request timed out.')), 15000);
+      document.head.appendChild(script);
+    });
+  }
+
+  function itunesFetch(path) {
+    const url = ITUNES_API + path;
+    if (itunesRequestCache.has(url)) return itunesRequestCache.get(url);
+    const task = itunesSlot()
+      .then(() => itunesJsonp(path))
+      .then(
+        (value) => { itunesRelease(); return value; },
+        (error) => { itunesRelease(); throw error; }
+      );
+    itunesRequestCache.set(url, task);
+    return task;
+  }
 
   function localMatches(query) {
     const needle = String(query || '').trim().toLowerCase();
@@ -1044,13 +1119,17 @@
     return element.play();
   }
 
-  async function playJioSaavn(id) {
+  async function playJioSaavn(id, meta) {
     const token = ++playRequestId;
+    playbackState = 'loading';
     const key = String(id || '').replace(/^stream:jiosaavn:/, '');
     let urls = streamCache.get(key);
     let track = null;
 
-    if (!urls || !urls.length) {
+    // Bundled/catalog IDs (s1, s9, itunes-…) are not JioSaavn IDs. Asking the
+    // API about them would only produce a 404 before the title/artist match.
+    const looksLikeJioId = /^[A-Za-z0-9_-]{10,}$/.test(key);
+    if ((!urls || !urls.length) && looksLikeJioId) {
       try {
         const data = await apiFetch('/songs?ids=' + encodeURIComponent(key));
         if (token !== playRequestId) return { success: false, stale: true };
@@ -1067,6 +1146,19 @@
     }
 
     if (token !== playRequestId) return { success: false, stale: true };
+
+    /* Bundled/search songs use short local IDs (s1, s9, itunes-…) that are not
+       JioSaavn IDs. Resolve their title/artist to a verified full-length Jio
+       track instead of failing and letting the player skip to another song. */
+    if (!urls || !urls.length) {
+      const hint = meta || (MV.data.getSong && MV.data.getSong(key)) || track;
+      if (hint && (hint.title || hint.artist)) {
+        const full = jioFullTrackFor(hint) || await jioLiveMatch(hint.title, hint.artist);
+        if (token !== playRequestId) return { success: false, stale: true };
+        if (full) return playJioFull(full.id, hint, token);
+      }
+    }
+
     if (!track) {
       const all = seedTracks().concat(cachedTracks());
       track = all.find((item) => String(item.id) === key) || { id: key, duration: 0 };
@@ -1080,17 +1172,18 @@
     } catch (error) {
       if (token !== playRequestId) return { success: false, stale: true };
       playbackState = 'paused';
-      return { success: false, message: 'Playback was blocked — click play again.' };
+      return { success: false, message: 'No full-length stream found for this song.' };
     }
   }
 
-  async function playItunes(id) {
+  async function playItunes(id, meta) {
     const token = ++playRequestId;
+    playbackState = 'loading';
     const key = String(id || '');
     const rawId = key.replace(/^itunes-/, '');
     let lookupItem = null;
     let track = itunesMeta.get(key) || seedTracks().concat(cachedTracks())
-      .find((item) => String(item.id) === key) || null;
+      .find((item) => String(item.id) === key) || meta || null;
 
     if (!track) {
       try {
@@ -1114,6 +1207,7 @@
 
   async function playLocal(path) {
     const token = ++playRequestId;
+    playbackState = 'loading';
     const requested = String(path || '');
     const key = requested.indexOf('local:') === 0 ? requested.slice(6) : requested;
     let entry = localTracks.get(key) || Array.from(localTracks.values())
@@ -1626,11 +1720,11 @@
 
     play_jiosaavn_track: playJioSaavn,
     rememberSpotify(items) { rememberSpotify(items, true); },
-    play_provider_track(id) {
+    play_provider_track(id, meta) {
       const key = String(id || '');
       if (key.indexOf('spotify-') === 0) return playSpotify(key);
-      if (key.indexOf('itunes-') === 0) return playItunes(key);
-      return playJioSaavn(key);
+      if (key.indexOf('itunes-') === 0) return playItunes(key, meta);
+      return playJioSaavn(key, meta);
     },
     play_song: playLocal,
 

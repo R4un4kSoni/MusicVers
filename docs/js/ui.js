@@ -86,11 +86,24 @@
     if (listContains(playlist && playlist.songs, song)) return playlist.songs;
     if (listContains(MV.store.state.liked, song)) return MV.store.state.liked;
     if (listContains(MV.localSongs, song)) return MV.localSongs;
+
+    // Home/discover shelves are built from discovery data, not from
+    // spotifyShelves. Match them before falling back, otherwise tapping a
+    // recommendation inherits the previous home-screen queue.
+    const discover = MV.discoverData || {};
+    const discoverLists = [discover.trending, discover.albums, discover.charts, discover.artists];
+    const discoverMatch = discoverLists.find((list) => listContains(list, song));
+    if (discoverMatch) return discoverMatch;
+
     const recommended = Object.keys(spotifyShelves)
       .map((name) => spotifyShelves[name])
       .find((list) => listContains(list, song));
     if (recommended) return recommended;
-    return MV.player.state.queue.length ? MV.player.state.queue : undefined;
+
+    // Never reuse the current queue as an implicit context. That made a
+    // searched song play, fail, then auto-advance into an unrelated
+    // home-screen track. A song with no known list gets its own one-item queue.
+    return [song];
   }
 
   function formatListeners(value) {

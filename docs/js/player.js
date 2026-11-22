@@ -29,6 +29,7 @@
 
   let progressBusy = false;
   let toggleBusy = false;
+  let playPending = false;
   let playSequence = 0;
   let autoAdvanceHandled = false;
   let pauseGraceUntil = 0;
@@ -148,6 +149,7 @@
     const prepared = prepare(track);
     if (!prepared) return;
     const sequence = ++playSequence;
+    autoAdvanceHandled = false;
 
     const settings = options || {};
     if (Array.isArray(list) && list.length) {
@@ -207,10 +209,19 @@
     applyAccent(state.current.cover, state.current.title + state.current.artist);
     notify();
 
-    const result = await MV.api.play(state.current);
+    let result;
+    playPending = true;
+    try {
+      result = await MV.api.play(state.current);
+    } finally {
+      if (sequence === playSequence) playPending = false;
+    }
     if (sequence !== playSequence) return;
     state.simulated = Boolean(result && result.simulated);
     if (result && result.success === false) {
+      // A failed stream must not be treated as a finished track: otherwise the
+      // progress loop skips to the next queued song (often a home-screen pick).
+      autoAdvanceHandled = true;
       MV.ui.toast(result.message || 'Playback could not start.');
       state.playing = false;
       notify();
@@ -415,6 +426,9 @@
     const delta = Math.min(1, (now - state.lastTick) / 1000);
     state.lastTick = now;
     if (!state.current || !state.playing) return;
+    // While a stream is being resolved the web bridge still reports the old
+    // "stopped" state. Auto-advancing on that would skip through the queue.
+    if (playPending) return;
 
     if (MV.api.isLive()) {
       if (progressBusy) return;

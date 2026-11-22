@@ -188,9 +188,29 @@
 
   /* ---------------- playback ---------------- */
 
+  // Short catalog IDs (s1, s9, itunes-…) are not JioSaavn IDs. Passing the
+  // title/artist along lets the web bridge resolve them to a full stream.
+  function playbackMeta(track) {
+    if (!track) return null;
+    return {
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      duration: track.duration,
+      cover: track.cover,
+      image: track.image,
+      provider: track.provider,
+      path: track.path,
+      raw: track.raw
+    };
+  }
+
   async function play(track) {
     if (!track) return { success: false, message: 'No track selected.' };
     if (!isLive()) return { success: true, simulated: true };
+
+    const meta = MV.webApi ? playbackMeta(track) : null;
 
     try {
       // Saved streaming tracks carry a synthetic path like `stream:jiosaavn:<id>`.
@@ -199,14 +219,14 @@
         const provider = parts[1] || 'jiosaavn';
         const providerId = parts.slice(2).join(':');
         return provider === 'jiosaavn'
-          ? await call('play_jiosaavn_track', providerId)
-          : await call('play_provider_track', providerId);
+          ? await call('play_jiosaavn_track', providerId, meta)
+          : await call('play_provider_track', providerId, meta);
       }
       if (track.path) return await call('play_song', track.path);
       if (track.provider === 'jiosaavn' || /^[a-zA-Z0-9_-]{10,}$/.test(String(track.id))) {
-        return await call('play_jiosaavn_track', String(track.id));
+        return await call('play_jiosaavn_track', String(track.id), meta);
       }
-      return await call('play_provider_track', String(track.id));
+      return await call('play_provider_track', String(track.id), meta);
     } catch (error) {
       return { success: false, message: error.message };
     }
