@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 500" role="img" aria-label="Terminal showing a successful wrangler deploy with the workers.dev URL highlighted to copy">
+  <defs>
+    <linearGradient id="bg4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e3efe6"/>
+      <stop offset="1" stop-color="#c7ddca"/>
+    </linearGradient>
+    <filter id="sh4" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#223a27" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect width="880" height="500" fill="url(#bg4)"/>
+
+  <g filter="url(#sh4)">
+    <rect x="46" y="44" width="788" height="330" rx="14" fill="#1e2028"/>
+    <rect x="46" y="44" width="788" height="38" rx="14" fill="#2b2e38"/>
+    <rect x="46" y="72" width="788" height="10" fill="#2b2e38"/>
+  </g>
+  <circle cx="72" cy="63" r="6" fill="#e06c5d"/>
+  <circle cx="92" cy="63" r="6" fill="#e3b341"/>
+  <circle cx="112" cy="63" r="6" fill="#67b978"/>
+  <text x="440" y="68" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#9aa1ad">terminal — musicatlas-proxy</text>
+
+  <g font-family="monospace" font-size="14">
+    <text x="70" y="116" fill="#7ec699">~/musicver/worker/musicatlas-proxy</text>
+    <text x="70" y="146" fill="#e8e9ed">$ wrangler deploy</text>
+    <text x="70" y="178" fill="#8b93a1">Total Upload: 2.41 KiB / gzip: 1.12 KiB</text>
+    <text x="70" y="202" fill="#8b93a1">Uploaded musicver-musicatlas-proxy (0.42 sec)</text>
+    <text x="70" y="226" fill="#8b93a1">Published musicver-musicatlas-proxy (0.88 sec)</text>
+    <text x="70" y="258" fill="#7ec699">Deployed musicver-musicatlas-proxy</text>
+  </g>
+
+  <rect x="64" y="278" width="756" height="62" rx="10" fill="#2f3b32" stroke="#5c9c6c" stroke-width="1.5"/>
+  <text x="84" y="300" font-family="monospace" font-size="13" fill="#a9d8b4">https://musicver-musicatlas-proxy.your-name.workers.dev</text>
+  <text x="84" y="324" font-family="Arial, sans-serif" font-size="12" fill="#8fc79b">↑ this is the proxy URL you need</text>
+  <rect x="700" y="292" width="102" height="34" rx="17" fill="#5c9c6c"/>
+  <text x="751" y="314" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#ffffff">COPY IT</text>
+
+  <g filter="url(#sh4)">
+    <rect x="150" y="404" width="580" height="62" rx="12" fill="#ffffff"/>
+  </g>
+  <circle cx="184" cy="435" r="15" fill="#e1f0e4"/>
+  <text x="184" y="441" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#3f8a51">✓</text>
+  <text x="212" y="431" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#24211d">That URL is yours permanently.</text>
+  <text x="212" y="452" font-family="Arial, sans-serif" font-size="12" fill="#6b645b">Re-running <tspan font-family="monospace">wrangler deploy</tspan> keeps the same address.</text>
+</svg>

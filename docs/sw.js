@@ -1,11 +1,17 @@
 /* musicVer app shell service worker. Network-first for page assets, never intercepts API calls. */
-const CACHE = 'musicver-shell-v1168';
+const CACHE = 'musicver-shell-v1174';
 const SHELL = [
   './',
   './index.html',
+  './musicatlas-guide.html',
   './manifest.webmanifest',
   './pwa/icon-192.png',
-  './pwa/icon-512.png'
+  './pwa/icon-512.png',
+  './guides/step-1-mcp.svg',
+  './guides/step-2-folder.svg',
+  './guides/step-3-login.svg',
+  './guides/step-4-deploy.svg',
+  './guides/step-5-app.svg'
 ];
 
 self.addEventListener('install', (event) => {

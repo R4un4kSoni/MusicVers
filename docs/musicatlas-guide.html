@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f5f1">
+  <meta name="description" content="Step-by-step illustrated guide to connect MusicAtlas Song Radio to musicVer using a free Cloudflare proxy.">
+  <title>Set up MusicAtlas Radio · musicVer</title>
+  <link rel="icon" type="image/png" href="pwa/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="css/base.css?v=1174">
+  <link rel="stylesheet" href="css/musicatlas-guide.css?v=1174">
+  <script>
+    /* Follow the app's saved light/dark choice. */
+    (function () {
+      try {
+        var raw = localStorage.getItem('musicver.f3.v1');
+        var theme = raw ? (JSON.parse(raw).theme || 'light') : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (error) { document.documentElement.setAttribute('data-theme', 'light'); }
+    })();
+  </script>
+</head>
+
+<body class="mg-page">
+
+  <header class="mg-topbar">
+    <div class="mg-topbar__inner">
+      <a class="mg-brand" href="index.html">
+        <span class="mg-brand__mark">◈</span>
+        <span>musicVer</span>
+      </a>
+      <a class="mg-back" href="index.html">← Back to the app</a>
+    </div>
+  </header>
+
+  <main class="mg-wrap">
+
+    <section class="mg-hero">
+      <p class="mg-eyebrow">Setup guide · 2 minutes</p>
+      <h1 class="mg-title">Better radio,<br><em>song by song.</em></h1>
+      <p class="mg-lede">MusicAtlas compares the actual sound of a recording and suggests tracks that genuinely fit. This guide sets up the tiny free bridge that lets the published musicVer site reach it. No API key, no payment, no code to write.</p>
+      <div class="mg-meta">
+        <span class="mg-pill">⏱ <b>~2 min</b> setup</span>
+        <span class="mg-pill">💰 <b>Free</b> Cloudflare account</span>
+        <span class="mg-pill">🔑 <b>No API key</b> needed</span>
+        <span class="mg-pill">📱 Works on <b>phone</b> too</span>
+      </div>
+    </section>
+
+    <div class="mg-callout">
+      <h2>First — do you actually need this?</h2>
+      <p>If you are running musicVer on your own computer at <code>127.0.0.1:8124</code> or <code>localhost:8124</code>, you can stop here. Song Radio calls MusicAtlas directly there, with no proxy and no setup. You only need the bridge below for the <strong>published GitHub Pages site</strong> or when opening the app on your <strong>phone</strong>, because MusicAtlas blocks those browser origins.</p>
+    </div>
+
+    <div class="mg-section-head">
+      <span>01 — 05</span>
+      <h2>Follow these five steps</h2>
+    </div>
+    <p class="mg-section-sub">Do them in order on a computer. You will copy one URL at the end and paste it into the app.</p>
+
+    <!-- STEP 1 -->
+    <section class="mg-step">
+      <div class="mg-step__text">
+        <span class="mg-step__num">1</span>
+        <h3>Confirm the public MusicAtlas endpoint</h3>
+        <p>Open the <a href="https://musicatlas.ai/developer/mcp" target="_blank" rel="noopener noreferrer">MusicAtlas MCP page ↗</a>. It publishes a remote server URL and a list of tools. The one musicVer uses is <code>find_similar_tracks</code> — it takes an artist and title and returns sonically similar songs.</p>
+        <span class="mg-cmd">https://mcp.musicatlas.ai/mcp</span>
+        <p>There is nothing to sign up for. The public endpoint is meant for discovery and experimentation, so no key is issued here.</p>
+        <div class="mg-note"><strong>Good to know:</strong> MusicAtlas applies fair-use rate limits. musicVer caches each song's result in memory, so it makes only a handful of calls in a normal session.</div>
+      </div>
+      <figure class="mg-step__image">
+        <img src="guides/step-1-mcp.svg" alt="MusicAtlas MCP page with the public server URL and find_similar_tracks tool" width="880" height="500">
+        <figcaption><strong>What you'll see:</strong> one server URL, four public tools, and no sign-in button.</figcaption>
+      </figure>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="mg-step">
+      <div class="mg-step__text">
+        <span class="mg-step__num">2</span>
+        <h3>Open the proxy folder in your project</h3>
+        <p>Everything you need already ships with the project. In your file explorer, open:</p>
+        <span class="mg-cmd">musicver / worker / musicatlas-proxy</span>
+        <p>Three files live there. <code>README.md</code> is a short version of this guide. <code>wrangler.toml</code> sets the allowed GitHub Pages origin. <code>src/index.js</code> is the whole proxy — about 100 lines that forward one read-only request and nothing else.</p>
+        <p>You don't need to edit any of them.</p>
+      </div>
+      <figure class="mg-step__image">
+        <img src="guides/step-2-folder.svg" alt="File explorer showing the worker/musicatlas-proxy folder and its three files" width="880" height="500">
+        <figcaption><strong>Tip:</strong> right-click the folder and choose “Open in Terminal” to jump straight to step 3.</figcaption>
+      </figure>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="mg-step">
+      <div class="mg-step__text">
+        <span class="mg-step__num">3</span>
+        <h3>Install Wrangler and sign in</h3>
+        <p>Wrangler is Cloudflare's free command-line tool. Open a terminal inside the folder from step 2 and run these two commands one after the other:</p>
+        <span class="mg-cmd">npm install -g wrangler\nwrangler login</span>
+        <p>The second command opens a browser window asking you to authorise Wrangler. Click <strong>Allow</strong>. If no window opens, copy the link printed in the terminal and paste it into your browser.</p>
+        <div class="mg-note"><strong>Already have Wrangler?</strong> Skip the install command. If you don't have a Cloudflare account yet, sign-up is free and needs no card.</div>
+      </div>
+      <figure class="mg-step__image">
+        <img src="guides/step-3-login.svg" alt="Terminal showing npm install and wrangler login alongside a Cloudflare approval window" width="880" height="500">
+        <figcaption><strong>You're done here</strong> when the terminal says you are logged in.</figcaption>
+      </figure>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="mg-step">
+      <div class="mg-step__text">
+        <span class="mg-step__num">4</span>
+        <h3>Deploy and copy your URL</h3>
+        <p>Still in the same folder, run:</p>
+        <span class="mg-cmd">wrangler deploy</span>
+        <p>In a few seconds Cloudflare prints a <em>Published</em> line followed by a <code>https://…workers.dev</code> address. That address is your proxy link. Select the whole thing — including <code>https://</code> — and copy it.</p>
+        <div class="mg-note"><strong>It's permanent.</strong> Running <code>wrangler deploy</code> again later updates the same Worker; the URL does not change.</div>
+      </div>
+      <figure class="mg-step__image">
+        <img src="guides/step-4-deploy.svg" alt="Terminal showing a successful wrangler deploy with the workers.dev URL highlighted" width="880" height="500">
+        <figcaption><strong>Copy this line</strong> — not the MCP URL from step 1.</figcaption>
+      </figure>
+    </section>
+
+    <!-- STEP 5 -->
+    <section class="mg-step">
+      <div class="mg-step__text">
+        <span class="mg-step__num">5</span>
+        <h3>Paste the link into musicVer</h3>
+        <p>Open musicVer and go to <strong>Account → MUSICATLAS RADIO</strong>. Paste your copied URL into the field labelled “Your MusicAtlas proxy URL” and press <strong>Save</strong>.</p>
+        <p>The status line should turn green and read <em>“Ready · MusicAtlas radio and recommendations are active.”</em> Now open any song's <code>◈</code> Radio button on the live site or your phone — it works without localhost.</p>
+      </div>
+      <figure class="mg-step__image">
+        <img src="guides/step-5-app.svg" alt="MusicVer Account page with the MusicAtlas proxy URL saved and a ready status" width="880" height="500">
+        <figcaption><strong>Saved per browser:</strong> repeat this one paste on each device you use.</figcaption>
+      </figure>
+    </section>
+
+    <div class="mg-section-head">
+      <span>Fixes</span>
+      <h2>If something looks off</h2>
+    </div>
+    <p class="mg-section-sub">Most issues are one of these. The app never breaks — a local song-specific mix takes over whenever MusicAtlas is unavailable.</p>
+
+    <div class="mg-trouble">
+      <div class="mg-trouble__card">
+        <h3>Status still says “Not configured”</h3>
+        <p>Press <strong>Save</strong> again and reload the page. The URL is stored only in that browser's local storage, so it must be entered once per device.</p>
+      </div>
+      <div class="mg-trouble__card">
+        <h3>I pasted the MCP URL instead</h3>
+        <p>The field wants <em>your</em> deployed Worker address, not <code>https://mcp.musicatlas.ai/mcp</code>. The MCP endpoint rejects GitHub Pages origins directly — that is the whole reason for the bridge.</p>
+      </div>
+      <div class="mg-trouble__card">
+        <h3>Works on PC, not on my phone</h3>
+        <p>Open musicVer on your phone, go to Account, and paste the same <code>workers.dev</code> URL there. There is no account linking involved.</p>
+      </div>
+      <div class="mg-trouble__card">
+        <h3>No recommendations appear</h3>
+        <p>MusicAtlas may be throttling under fair-use limits. Wait a minute and try another song. Song Radio still returns a local mix in the meantime.</p>
+      </div>
+      <div class="mg-trouble__card">
+        <h3>Where is my API key?</h3>
+        <p>There isn't one. This setup uses the public MCP endpoint. If you later switch to the REST API, you can request a free key from the MusicAtlas developer page.</p>
+      </div>
+      <div class="mg-trouble__card">
+        <h3>What leaves my device?</h3>
+        <p>Only the track and artist name of the song you open. No audio or artwork is streamed from MusicAtlas — playback is always resolved to full-length JioSaavn audio.</p>
+      </div>
+    </div>
+
+    <div class="mg-cta">
+      <h2>Ready to hear it?</h2>
+      <p>Head back to the app, save your proxy URL, then press <strong>◈</strong> on any song. Song Radio, the recommendation shelves and playlist <strong>+</strong> picks all use MusicAtlas first.</p>
+      <div class="mg-cta__actions">
+        <a class="btn btn--dark" href="index.html">Open musicVer →</a>
+        <a class="btn btn--outline" href="https://musicatlas.ai/developer/mcp" target="_blank" rel="noopener noreferrer">MusicAtlas MCP ↗</a>
+      </div>
+    </div>
+
+    <footer class="mg-footer">
+      <span>musicVer · MusicAtlas Radio setup</span>
+      <nav class="mg-footer__links" aria-label="Reference links">
+        <a href="https://musicatlas.ai/developer" target="_blank" rel="noopener noreferrer">Developer platform</a>
+        <a href="https://musicatlas.ai/developer/mcp" target="_blank" rel="noopener noreferrer">MCP docs</a>
+        <a href="https://developers.cloudflare.com/workers/wrangler/commands/#deploy" target="_blank" rel="noopener noreferrer">Wrangler deploy</a>
+        <a href="index.html">Back to app</a>
+      </nav>
+    </footer>
+
+  </main>
+
+</body>
+
+</html>

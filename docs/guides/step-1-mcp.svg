@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 500" role="img" aria-label="Browser window showing the MusicAtlas MCP page with the public server URL highlighted">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#efe9df"/>
+      <stop offset="1" stop-color="#d9d2c6"/>
+    </linearGradient>
+    <filter id="sh1" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#3a2f1e" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <rect width="880" height="500" fill="url(#bg1)"/>
+  <g filter="url(#sh1)">
+    <rect x="58" y="40" width="764" height="420" rx="18" fill="#ffffff"/>
+    <rect x="58" y="40" width="764" height="52" rx="18" fill="#f3f1ed"/>
+    <rect x="58" y="76" width="764" height="16" fill="#f3f1ed"/>
+  </g>
+  <circle cx="86" cy="66" r="7" fill="#e06c5d"/>
+  <circle cx="110" cy="66" r="7" fill="#e3b341"/>
+  <circle cx="134" cy="66" r="7" fill="#67b978"/>
+  <rect x="170" y="52" width="560" height="28" rx="14" fill="#ffffff" stroke="#e4e0d9"/>
+  <text x="188" y="70" font-family="Arial, sans-serif" font-size="14" fill="#6b645b">https://musicatlas.ai/developer/mcp</text>
+
+  <text x="96" y="140" font-family="Arial, sans-serif" font-size="13" font-weight="700" letter-spacing="2" fill="#8b6f57">MUSICATLAS MCP</text>
+  <text x="96" y="174" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#24211d">Music discovery for AI agents</text>
+  <text x="96" y="202" font-family="Arial, sans-serif" font-size="14" fill="#6b645b">Public endpoint · no sign-in, no API key, no payment</text>
+
+  <rect x="96" y="226" width="688" height="70" rx="12" fill="#faf6ef" stroke="#c9b7a4" stroke-width="1.5"/>
+  <text x="118" y="253" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#8b6f57">MCP SERVER URL</text>
+  <text x="118" y="279" font-family="monospace" font-size="18" fill="#24211d">https://mcp.musicatlas.ai/mcp</text>
+  <rect x="596" y="242" width="170" height="38" rx="19" fill="#8b6f57"/>
+  <text x="681" y="266" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff">PUBLIC ACCESS</text>
+
+  <rect x="96" y="316" width="332" height="66" rx="12" fill="#ffffff" stroke="#e4e0d9"/>
+  <circle cx="126" cy="349" r="13" fill="#efe6da"/>
+  <text x="126" y="354" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#8b6f57">♪</text>
+  <text x="150" y="345" font-family="monospace" font-size="14" fill="#24211d">find_similar_tracks</text>
+  <text x="150" y="365" font-family="Arial, sans-serif" font-size="12" fill="#6b645b">The one tool musicVer uses</text>
+
+  <rect x="452" y="316" width="332" height="66" rx="12" fill="#ffffff" stroke="#e4e0d9"/>
+  <circle cx="482" cy="349" r="13" fill="#e7f1e8"/>
+  <text x="482" y="354" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#3f8a51">✓</text>
+  <text x="506" y="345" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#24211d">Fair-use limits apply</text>
+  <text x="506" y="365" font-family="Arial, sans-serif" font-size="12" fill="#6b645b">Automated traffic may be throttled</text>
+
+  <path d="M700 398 q34 -26 66 0" fill="none" stroke="#8b6f57" stroke-width="2" stroke-dasharray="5 5"/>
+  <text x="96" y="430" font-family="Arial, sans-serif" font-size="13" fill="#6b645b">Tip: you do not need a MusicAtlas API key for this setup — the proxy uses the public MCP endpoint.</text>
+</svg>

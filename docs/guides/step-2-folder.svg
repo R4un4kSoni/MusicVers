@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 500" role="img" aria-label="File explorer showing the worker/musicatlas-proxy folder and its three files">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eae6f0"/>
+      <stop offset="1" stop-color="#d3ccdf"/>
+    </linearGradient>
+    <filter id="sh2" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#2e2740" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <rect width="880" height="500" fill="url(#bg2)"/>
+  <g filter="url(#sh2)">
+    <rect x="90" y="36" width="700" height="430" rx="16" fill="#ffffff"/>
+    <rect x="90" y="36" width="700" height="46" rx="16" fill="#f4f2f7"/>
+    <rect x="90" y="68" width="700" height="14" fill="#f4f2f7"/>
+  </g>
+  <circle cx="116" cy="59" r="6" fill="#e06c5d"/>
+  <circle cx="136" cy="59" r="6" fill="#e3b341"/>
+  <circle cx="156" cy="59" r="6" fill="#67b978"/>
+  <text x="186" y="64" font-family="Arial, sans-serif" font-size="13" fill="#6b645b">musicver / worker / musicatlas-proxy</text>
+
+  <rect x="90" y="100" width="228" height="366" fill="#faf9fc"/>
+  <line x1="318" y1="100" x2="318" y2="466" stroke="#e9e6ef"/>
+
+  <g font-family="Arial, sans-serif" font-size="14" fill="#4a4553">
+    <text x="112" y="132">▾  musicver</text>
+    <text x="130" y="162">▸  docs</text>
+    <text x="130" y="192">▸  backend</text>
+    <text x="130" y="222">▾  worker</text>
+    <text x="160" y="252" font-weight="700" fill="#6b4fa8">▾  musicatlas-proxy</text>
+    <text x="196" y="282" fill="#6b645b">README.md</text>
+    <text x="196" y="312" fill="#6b645b">wrangler.toml</text>
+    <text x="196" y="342" fill="#6b645b">src /</text>
+    <text x="232" y="372" fill="#6b645b">index.js</text>
+  </g>
+
+  <text x="352" y="132" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#24211d">worker/musicatlas-proxy</text>
+  <text x="352" y="158" font-family="Arial, sans-serif" font-size="13" fill="#6b645b">Open this folder in your terminal. It already contains everything you need.</text>
+
+  <g>
+    <rect x="352" y="182" width="404" height="60" rx="10" fill="#f7f3fb" stroke="#dcd3ea"/>
+    <rect x="368" y="198" width="34" height="28" rx="6" fill="#6b4fa8"/>
+    <text x="385" y="217" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">MD</text>
+    <text x="416" y="210" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#24211d">README.md</text>
+    <text x="416" y="229" font-family="Arial, sans-serif" font-size="12" fill="#6b645b">Short instructions, same as this guide</text>
+  </g>
+  <g>
+    <rect x="352" y="252" width="404" height="60" rx="10" fill="#ffffff" stroke="#e9e6ef"/>
+    <rect x="368" y="268" width="34" height="28" rx="6" fill="#d8a657"/>
+    <text x="385" y="287" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">TOML</text>
+    <text x="416" y="280" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#24211d">wrangler.toml</text>
+    <text x="416" y="299" font-family="Arial, sans-serif" font-size="12" fill="#6b645b">Sets the allowed GitHub Pages origin</text>
+  </g>
+  <g>
+    <rect x="352" y="322" width="404" height="60" rx="10" fill="#ffffff" stroke="#e9e6ef"/>
+    <rect x="368" y="338" width="34" height="28" rx="6" fill="#4f8fbd"/>
+    <text x="385" y="357" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#fff">JS</text>
+    <text x="416" y="350" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#24211d">src/index.js</text>
+    <text x="416" y="369" font-family="Arial, sans-serif" font-size="12" fill="#6b645b">The tiny read-only forwarding script</text>
+  </g>
+
+  <rect x="352" y="402" width="404" height="44" rx="10" fill="#efe9f7"/>
+  <text x="372" y="429" font-family="Arial, sans-serif" font-size="13" fill="#55466f">Tip: right-click the folder → “Open in Terminal”.</text>
+</svg>

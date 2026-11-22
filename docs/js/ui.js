@@ -33,6 +33,7 @@
   let albumToken = 0;
   const spotifyShelves = Object.create(null);
   const spotifyShelfTokens = Object.create(null);
+  const musicatlasResolveCache = new Map();
   let profileEditorOpen = false;
   let selectedStoryMonth = '';
   let storyIndex = 0;
@@ -992,35 +993,76 @@
     });
   }
 
+  function setRecommendationEyebrow(name, sourceName) {
+    const eyebrow = el('spotify-' + name + '-eyebrow');
+    if (!eyebrow) return;
+    eyebrow.textContent = sourceName === 'spotify'
+      ? 'SPOTIFY RECOMMENDS'
+      : (sourceName === 'musicatlas' ? 'MUSICATLAS RECOMMENDS' : 'RECOMMENDED FOR YOU');
+  }
+
+  /** Live source chosen for recommendation shelves: MusicAtlas, then Spotify. */
+  function recommendationState() {
+    const musicatlas = MV.musicatlas && MV.musicatlas.status && MV.musicatlas.status();
+    if (musicatlas && musicatlas.ready) {
+      return { source: 'musicatlas', label: 'MUSICATLAS PICKS', live: true };
+    }
+    const spotify = MV.spotify && MV.spotify.status && MV.spotify.status();
+    if (spotify && spotify.ready) {
+      return { source: 'spotify', label: 'LIVE SPOTIFY', live: true };
+    }
+    const configured = Boolean((musicatlas && musicatlas.configured) || (spotify && spotify.configured));
+    return { source: 'local', label: configured ? 'CONNECT FOR LIVE PICKS' : 'LOCAL PICKS', live: false };
+  }
+
   function renderSpotifyShelf(name, seeds) {
     const config = SPOTIFY_SHELVES[name];
     const host = config ? el(config.host) : null;
     if (!host) return;
     const payload = compactSpotifySeeds(seeds);
-    const status = MV.spotify ? MV.spotify.status() : null;
-    const token = name + '|' + (status && status.ready ? 'live' : 'local') + '|' + JSON.stringify(payload);
+    const recommendation = recommendationState();
+    const token = name + '|' + recommendation.source + '|' + JSON.stringify(payload);
     spotifyShelfTokens[name] = token;
     host.innerHTML = '<div class="recommend-skeleton"><span></span><span></span><span></span><span></span></div>';
 
     const source = el(config.source);
     if (source) {
-      source.textContent = status && status.ready
-        ? 'LIVE SPOTIFY'
-        : (status && status.connected ? 'RECONNECTING' : 'CONNECT FOR LIVE PICKS');
-      source.classList.toggle('is-live', Boolean(status && status.ready));
+      source.textContent = recommendation.label;
+      source.classList.toggle('is-live', recommendation.live);
+    }
+    setRecommendationEyebrow(name, recommendation.source);
+
+    let request;
+    if (recommendation.source === 'musicatlas') {
+      const seed = musicAtlasSeedForShelf(name, seeds);
+      request = seed
+        ? MV.musicatlas.similarTracks(seed, Math.min(100, config.limit + 20)).then((data) =>
+          resolveMusicAtlasTracks(data && data.tracks, config.limit).then((tracks) => ({
+            source: 'musicatlas',
+            tracks: tracks
+          })))
+        : Promise.resolve({ source: 'local', tracks: [] });
+    } else {
+      request = MV.spotify
+        ? MV.spotify.recommendFor(payload, config.limit)
+        : Promise.resolve({ source: 'local', tracks: [] });
     }
 
-    const request = MV.spotify
-      ? MV.spotify.recommendFor(payload, config.limit)
-      : Promise.resolve({ source: 'local', tracks: [] });
-
-    Promise.resolve(request).then((data) => {
+    Promise.resolve(request).then(async (data) => {
       if (spotifyShelfTokens[name] !== token) return;
-      const tracks = ((data && data.tracks) || []).filter(Boolean).slice(0, config.limit);
+      let tracks = ((data && data.tracks) || []).filter(Boolean).slice(0, config.limit);
+      let sourceName = data && data.source === 'spotify'
+        ? 'spotify' : (data && data.source === 'musicatlas' ? 'musicatlas' : 'local');
+      if (!tracks.length && recommendation.source !== 'local') {
+        const fallback = MV.spotify
+          ? await MV.spotify.recommendFor(payload, config.limit)
+          : null;
+        tracks = ((fallback && fallback.tracks) || []).filter(Boolean).slice(0, config.limit);
+        sourceName = 'local';
+      }
       spotifyShelves[name] = tracks;
-      const live = Boolean(data && data.source === 'spotify');
       if (!tracks.length) {
-        host.innerHTML = '<div class="recommend-empty">No picks yet. Connect Spotify or try another search.</div>';
+        host.innerHTML = '<div class="recommend-empty">No picks yet. Add your MusicAtlas proxy URL or connect Spotify in Account.</div>';
         if (source) {
           source.textContent = 'NO PICKS';
           source.classList.remove('is-live');
@@ -1030,9 +1072,11 @@
       host.innerHTML = tracks.map((song) =>
         mediaCard(song, 'song', { spotify: true, action: 'play-song', glyph: '▶' })).join('');
       if (source) {
-        source.textContent = live ? 'LIVE SPOTIFY' : 'LOCAL PICKS';
-        source.classList.toggle('is-live', live);
+        source.textContent = sourceName === 'spotify'
+          ? 'LIVE SPOTIFY' : (sourceName === 'musicatlas' ? 'MUSICATLAS PICKS' : 'LOCAL PICKS');
+        source.classList.toggle('is-live', sourceName !== 'local');
       }
+      setRecommendationEyebrow(name, sourceName);
     }).catch(() => {
       if (spotifyShelfTokens[name] !== token) return;
       spotifyShelves[name] = [];
@@ -1539,23 +1583,33 @@
         const refresh = root.querySelector('#suggestion-refresh');
         if (refresh && candidates.length) refresh.onclick = () => { addSongsPage += 1; renderRows(root); };
         renderRows(root);
-        // When Spotify is connected, widen the pool with live recommendations
-        // built from this device's taste instead of only the bundled catalog.
-        if (MV.spotify && MV.spotify.status && MV.spotify.status().ready) {
+        // Widen the pool with live recommendations from the active provider:
+        // MusicAtlas first, then Spotify. The local pool always remains.
+        const addExtra = (extra) => {
+          if (!extra || !extra.length || !root.isConnected) return;
+          const keys = new Set(candidates.map(suggestionKey));
+          extra.forEach((song) => {
+            if (!song || !song.title) return;
+            if (listContains(live.songs, song) || keys.has(suggestionKey(song))) return;
+            keys.add(suggestionKey(song));
+            candidates.push(song);
+          });
+          pageCount = Math.max(1, Math.ceil(candidates.length / pageSize));
+          addSongsPage = 0;
+          renderRows(root);
+        };
+        const recommendation = recommendationState();
+        if (recommendation.source === 'musicatlas' && MV.musicatlas) {
+          const seed = musicAtlasSeedFromSongs(live.songs);
+          if (seed) {
+            MV.musicatlas.similarTracks(seed, 50)
+              .then((data) => resolveMusicAtlasTracks(data && data.tracks, 30))
+              .then(addExtra)
+              .catch(() => { /* keep the local pool */ });
+          }
+        } else if (recommendation.source === 'spotify' && MV.spotify) {
           MV.spotify.recommendFor(personalizeSeeds({ queries: [live.name].filter(Boolean) }), 30, { fresh: true })
-            .then((data) => {
-              const extra = ((data && data.tracks) || []).filter((song) => song && song.title);
-              if (!extra.length || !root.isConnected) return;
-              const keys = new Set(candidates.map(suggestionKey));
-              extra.forEach((song) => {
-                if (listContains(live.songs, song) || keys.has(suggestionKey(song))) return;
-                keys.add(suggestionKey(song));
-                candidates.push(song);
-              });
-              pageCount = Math.max(1, Math.ceil(candidates.length / pageSize));
-              addSongsPage = 0;
-              renderRows(root);
-            })
+            .then((data) => addExtra((data && data.tracks) || []))
             .catch(() => { /* keep the local pool */ });
         }
       },
@@ -1830,6 +1884,119 @@
     return uniqueItems([].concat(seeds || [], found, fallback), itemKey).slice(0, 50);
   }
 
+  /* ---------------- MusicAtlas → playable metadata ---------------- */
+
+  /** In-browser calls go through web-api; pywebview keeps using the bridge. */
+  async function searchMetadataSongs(query, entry) {
+    const needle = String(query || '').trim();
+    if (!needle) return [];
+    // Prefer the narrow full-length resolver: one JioSaavn lookup instead of a
+    // full Spotify/iTunes/Jio metadata search for every recommended name.
+    // The web build also exposes a pywebview-shaped bridge, so this must run
+    // before the generic isLive() branch.
+    if (MV.webApi && MV.webApi.find_full_track && entry) {
+      try {
+        const full = await MV.webApi.find_full_track(entry.title || needle, entry.artist);
+        if (full) return [full];
+      } catch (error) { /* fall through to metadata search */ }
+    }
+    if (MV.api && MV.api.isLive && MV.api.isLive()) {
+      const response = await MV.api.search(needle);
+      return (response && response.songs) || [];
+    }
+    if (MV.webApi && MV.webApi.search_online_music) {
+      const response = await MV.webApi.search_online_music(needle);
+      return (response && (response.results || response.songs)) || [];
+    }
+    const response = await MV.api.search(needle);
+    return (response && response.songs) || [];
+  }
+
+  function metadataText(value) {
+    return radioText(value)
+      .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function pickMetadataMatch(songs, entry) {
+    const wantedTitle = metadataText(entry && entry.title);
+    const wantedArtist = metadataText(entry && entry.artist);
+    if (!wantedTitle) return null;
+    let best = null;
+    let bestScore = 0;
+    (songs || []).forEach((song) => {
+      if (!song || !song.title) return;
+      const title = metadataText(song.title);
+      if (!title || (title !== wantedTitle &&
+          title.indexOf(wantedTitle) < 0 && wantedTitle.indexOf(title) < 0)) return;
+      const artist = metadataText(song.artist);
+      let score = title === wantedTitle ? 13 : 5;
+      if (artist && wantedArtist) {
+        if (artist === wantedArtist) score += 8;
+        else if (artist.indexOf(wantedArtist) >= 0 || wantedArtist.indexOf(artist) >= 0) score += 4;
+        else score -= 8;
+      }
+      if (score > bestScore) {
+        best = song;
+        bestScore = score;
+      }
+    });
+    // A partial title match alone is too weak; require title + artist support.
+    return bestScore >= 8 ? best : null;
+  }
+
+  function resolveMusicAtlasEntry(entry) {
+    const query = [entry && entry.title, entry && entry.artist].filter(Boolean).join(' ');
+    const key = metadataText(query);
+    if (musicatlasResolveCache.has(key)) return musicatlasResolveCache.get(key);
+    const promise = searchMetadataSongs(query, entry)
+      .then((songs) => pickMetadataMatch(songs, entry))
+      .catch(() => null);
+    if (musicatlasResolveCache.size >= 120) {
+      const oldest = musicatlasResolveCache.keys().next().value;
+      if (oldest !== key) musicatlasResolveCache.delete(oldest);
+    }
+    musicatlasResolveCache.set(key, promise);
+    return promise;
+  }
+
+  /** Resolve MusicAtlas names to app tracks, preserving similarity order. */
+  async function resolveMusicAtlasTracks(entries, limit, language) {
+    const wanted = (entries || []).filter((entry) => entry && entry.title)
+      .slice(0, Math.max(1, Number(limit) || 50));
+    if (!wanted.length) return [];
+    const resolved = new Array(wanted.length);
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < wanted.length) {
+        const index = cursor;
+        cursor += 1;
+        const entry = wanted[index];
+        const song = await resolveMusicAtlasEntry(entry);
+        if (song && radioLanguageMatches(song, language)) resolved[index] = song;
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(4, wanted.length) }, worker));
+    return resolved.filter(Boolean);
+  }
+
+  function musicAtlasSeedFromSongs(list) {
+    const candidates = (list || []).slice().reverse();
+    const found = candidates.find((item) => item && item.title && item.artist);
+    return found ? { title: found.title, artist: found.artist } : null;
+  }
+
+  function musicAtlasSeedForShelf(name, seeds) {
+    const source = seeds || {};
+    const candidates = []
+      .concat(source.tracks || [])
+      .concat(MV.store.state.recentlyPlayed || [])
+      .concat((MV.discoverData && MV.discoverData.trending) || [])
+      .concat(D.songs || []);
+    return musicAtlasSeedFromSongs(candidates);
+  }
+
   async function openSongMix(song) {
     if (!song) return;
     rememberAlbumReturn();
@@ -1851,37 +2018,256 @@
     showGeneratedAlbum(album, tracks, [], 'Built a ' + tracks.length + '-song mix around ' + song.title + '.');
   }
 
-  function spotifySeedsForSong(song) {
-    const id = spotifyRawId(song);
-    return personalizeSeeds({
-      tracks: id ? [id] : [],
-      queries: [song && song.title, song && song.artist].filter(Boolean)
-    });
+  const RADIO_STOP_WORDS = new Set([
+    'the', 'and', 'for', 'with', 'from', 'your', 'you', 'are', 'this', 'that',
+    'song', 'mix', 'radio', 'official', 'video', 'live', 'remix', 'feat'
+  ]);
+
+  function radioText(value) {
+    let text = String(value == null ? '' : value).toLowerCase();
+    if (text.normalize) text = text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    return text.trim();
   }
 
-  /** Song Radio: Spotify chooses related tracks, our player plays them. */
+  const RADIO_LANGUAGE_NAMES = {
+    'hindi': 'hindi', 'bollywood': 'hindi', 'hindi songs': 'hindi',
+    'english': 'english', 'eng': 'english', 'en': 'english', 'english songs': 'english',
+    'tamil': 'tamil', 'telugu': 'telugu', 'punjabi': 'punjabi', 'bengali': 'bengali',
+    'marathi': 'marathi', 'malayalam': 'malayalam', 'kannada': 'kannada',
+    'gujarati': 'gujarati', 'urdu': 'urdu', 'nepali': 'nepali',
+    'spanish': 'spanish', 'french': 'french', 'korean': 'korean',
+    'japanese': 'japanese', 'chinese': 'chinese', 'arabic': 'arabic'
+  };
+
+  const RADIO_LANGUAGE_SCRIPTS = [
+    { re: /[\u0900-\u097F]/, language: 'hindi' },
+    { re: /[\u0980-\u09FF]/, language: 'bengali' },
+    { re: /[\u0A00-\u0A7F]/, language: 'punjabi' },
+    { re: /[\u0A80-\u0AFF]/, language: 'gujarati' },
+    { re: /[\u0B80-\u0BFF]/, language: 'tamil' },
+    { re: /[\u0C00-\u0C7F]/, language: 'telugu' },
+    { re: /[\u0C80-\u0CFF]/, language: 'kannada' },
+    { re: /[\u0D00-\u0D7F]/, language: 'malayalam' },
+    { re: /[\u0600-\u06FF]/, language: 'urdu' },
+    { re: /[\uAC00-\uD7AF]/, language: 'korean' },
+    { re: /[\u3040-\u30FF]/, language: 'japanese' },
+    { re: /[\u4E00-\u9FFF]/, language: 'chinese' }
+  ];
+
+  function languageName(value) {
+    return RADIO_LANGUAGE_NAMES[radioText(value)] || '';
+  }
+
+  /** Infer language for tracks whose provider left the field empty. */
+  function catalogLanguageFor(item) {
+    const songs = D.songs || [];
+    const key = radioKey(item);
+    let known = key ? songs.find((song) => song.language && radioKey(song) === key) : null;
+    if (known) return languageName(known.language);
+    const artists = radioArtists(item.artist);
+    for (let i = 0; i < artists.length; i += 1) {
+      known = songs.find((song) => song.language &&
+        radioArtists(song.artist).indexOf(artists[i]) >= 0);
+      if (known) return languageName(known.language);
+    }
+    return '';
+  }
+
+  /** Normalize an explicit language, then infer from catalog/script. */
+  function radioLanguage(item) {
+    if (!item) return '';
+    const explicit = languageName(item.language);
+    if (explicit) return explicit;
+    // Spotify sometimes puts album_type in `language`; the bundled catalog
+    // still knows many of the same recordings and their artists.
+    const catalog = catalogLanguageFor(item);
+    if (catalog) return catalog;
+    const text = [radioTitleText(item), radioArtistText(item), radioText(item.album)].join(' ');
+    for (let i = 0; i < RADIO_LANGUAGE_SCRIPTS.length; i += 1) {
+      if (RADIO_LANGUAGE_SCRIPTS[i].re.test(text)) return RADIO_LANGUAGE_SCRIPTS[i].language;
+    }
+    // JioSaavn results often omit `language`. A Latin-script recording with no
+    // catalog language is treated as English so an untagged seed cannot produce
+    // a mixed Hindi/English radio.
+    if (/[A-Za-z]/.test(text)) return 'english';
+    return '';
+  }
+
+  /** Once the seed language is known, every added track must match it. */
+  function radioLanguageMatches(item, language) {
+    if (!language) return true;
+    return radioLanguage(item) === language;
+  }
+
+  function filterRadioLanguage(items, language) {
+    return (items || []).filter((item) => radioLanguageMatches(item, language));
+  }
+
+  function radioTitleText(item) {
+    return radioText(item && (item.title || item.name));
+  }
+
+  function radioArtistText(item) {
+    const value = item && item.artist;
+    const artist = value && typeof value === 'object'
+      ? (value.name || value.title || '')
+      : value;
+    return radioText(artist);
+  }
+
+  /** Deduplicate by recording, not by provider ID: the same song can arrive
+   *  from the bundled catalogue, search results and MusicAtlas with different IDs. */
+  function radioKey(item) {
+    return radioTitleText(item) + '|' + radioArtistText(item);
+  }
+
+  function sameRadioRecording(left, right) {
+    const title = radioTitleText(left);
+    if (!title || title !== radioTitleText(right)) return false;
+    const leftArtist = radioArtistText(left);
+    const rightArtist = radioArtistText(right);
+    if (!leftArtist || !rightArtist) return true;
+    return leftArtist === rightArtist ||
+      leftArtist.indexOf(rightArtist) >= 0 || rightArtist.indexOf(leftArtist) >= 0;
+  }
+
+  function uniqueRadioTracks(items, limit) {
+    const result = [];
+    (items || []).forEach((item) => {
+      if (!item || !radioTitleText(item)) return;
+      if (result.some((kept) => sameRadioRecording(kept, item))) return;
+      result.push(item);
+    });
+    return result.slice(0, Math.max(1, Number(limit) || 50));
+  }
+
+  function radioArtists(value) {
+    return radioText(value)
+      .split(/[,;&]|\s+feat\.?\s*|\s+ft\.?\s*|\s+with\s+/i)
+      .map((name) => name.replace(/\([^)]*\)/g, '').trim())
+      .filter(Boolean);
+  }
+
+  function radioWords(value) {
+    return radioText(value)
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((word) => word.length > 2 && !RADIO_STOP_WORDS.has(word));
+  }
+
+  /**
+   * Song-specific fallback when Spotify is not connected (or returned only
+   * local picks). Known different languages (e.g. Hindi on an English radio)
+   * are excluded entirely; same artist/album rank first, and a seed-derived
+   * tie-break means two different songs never get the same ordering.
+   */
+  function localSongRadio(song, limit) {
+    const seedKey = radioKey(song);
+    const seedArtists = radioArtists(song.artist);
+    const seedWords = new Set(radioWords(song.title));
+    const seedLanguage = radioLanguage(song);
+    const seedAlbum = radioText(song.album);
+    const pool = [];
+    const seen = new Set([seedKey]);
+    const add = (item) => {
+      if (!item || !item.title) return;
+      if (!radioLanguageMatches(item, seedLanguage)) return;
+      const key = radioKey(item);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      pool.push(item);
+    };
+
+    const trending = (MV.discoverData && MV.discoverData.trending) || [];
+    trending.forEach(add);
+    D.songs.forEach(add);
+    (MV.localSongs || []).forEach(add);
+    (MV.store.state.liked || []).slice().reverse().forEach(add);
+    (MV.store.state.recentlyPlayed || []).slice().reverse().forEach(add);
+    const result = MV.searchState && MV.searchState.result;
+    (result && result.songs || []).forEach(add);
+    Object.keys(spotifyShelves).forEach((name) => (spotifyShelves[name] || []).forEach(add));
+
+    const ranked = pool.map((item, index) => {
+      const artists = radioArtists(item.artist);
+      let score = 0;
+      if (seedAlbum && radioText(item.album) === seedAlbum) score += 60;
+      if (artists.some((name) => seedArtists.indexOf(name) >= 0)) {
+        score += 90;
+      } else if (artists.some((name) => seedArtists.some((seed) =>
+        name.indexOf(seed) >= 0 || seed.indexOf(name) >= 0))) {
+        score += 35;
+      }
+      const language = radioLanguage(item);
+      if (seedLanguage && language === seedLanguage) score += 24;
+      else if (seedLanguage && language) score -= 6;
+      radioWords(item.title).forEach((word) => { if (seedWords.has(word)) score += 8; });
+      const duration = Number(item.duration);
+      const seedDuration = Number(song.duration);
+      if (duration > 0 && seedDuration > 0) {
+        score += Math.max(0, 10 - Math.abs(duration - seedDuration) / 30);
+      }
+      if (MV.store.isLiked && MV.store.isLiked(item.id)) score += 3;
+      // Small seed-specific nudge plus a deterministic tie-break keeps two
+      // different songs from ending up with the same fallback listening set.
+      const recordingKey = radioKey(item);
+      score += hashSeed(seedKey + '|' + recordingKey) % 10;
+      const tie = hashSeed(seedKey + '|' + recordingKey + '|' + index);
+      return { item, score, tie };
+    }).sort((a, b) => b.score - a.score || a.tie - b.tie);
+
+    // The bundled catalogue is small; using all of it would make every offline
+    // radio identical. Keep a seed-specific, relevance-ranked subset instead.
+    const amount = Math.min(
+      Math.max(1, Number(limit) || 49),
+      Math.max(12, Math.ceil(pool.length * 0.7))
+    );
+    return uniqueRadioTracks(ranked.slice(0, amount).map((entry) => entry.item), amount);
+  }
+
+  /** Song Radio: MusicAtlas → Spotify → song-specific local mix. */
   async function openSongRadio(song) {
     if (!song) return;
     rememberAlbumReturn();
+    const language = radioLanguage(song);
     let related = [];
-    try {
-      if (MV.spotify && MV.spotify.songRadio) {
-        const data = await MV.spotify.songRadio(song, 50);
-        related = ((data && data.tracks) || []).filter(Boolean);
-      } else if (MV.spotify) {
-        const data = await MV.spotify.recommendFor(spotifySeedsForSong(song), 30, { fresh: true });
-        related = ((data && data.tracks) || []).filter(Boolean);
+    let radioSource = 'local';
+
+    if (song.title) {
+      try {
+        const musicatlas = MV.musicatlas && MV.musicatlas.status && MV.musicatlas.status();
+        if (musicatlas && musicatlas.ready) {
+          const data = await MV.musicatlas.songRadio(song, 50);
+          const found = await resolveMusicAtlasTracks(data && data.tracks, 49, language);
+          if (found.length) {
+            related = found;
+            radioSource = 'musicatlas';
+          }
+        }
+      } catch (error) {
+        related = [];
       }
-    } catch (error) {
-      related = [];
     }
+
     if (!related.length) {
-      toast('Spotify radio is unavailable here — building a local mix instead.');
-      await openSongMix(song);
-      return;
+      try {
+        const status = MV.spotify && MV.spotify.status && MV.spotify.status();
+        if (status && status.ready && MV.spotify.songRadio) {
+          const data = await MV.spotify.songRadio(song, 50, { nonce: spotifyFeedNonce });
+          const found = filterRadioLanguage(((data && data.tracks) || []).filter(Boolean), language);
+          if (data && data.source === 'spotify' && found.length) {
+            related = found;
+            radioSource = 'spotify';
+          }
+        }
+      } catch (error) {
+        related = [];
+      }
     }
-    const tracks = uniqueItems([song].concat(related), itemKey).slice(0, 50);
-    if (MV.webApi && MV.webApi.rememberSpotify) {
+
+    if (!related.length) related = localSongRadio(song, 49);
+
+    const tracks = uniqueRadioTracks(filterRadioLanguage([song].concat(related), language), 50);
+    if (radioSource === 'spotify' && MV.webApi && MV.webApi.rememberSpotify) {
       try { MV.webApi.rememberSpotify(tracks); } catch (error) { /* best effort */ }
     }
     const album = {
@@ -1889,10 +2275,13 @@
       title: song.title + ' Radio',
       artist: song.artist || 'MusicVer Radio',
       cover: song.cover,
+      language: language || song.language || '',
       kind: 'mix',
       generated: true
     };
-    showGeneratedAlbum(album, tracks, [], 'Radio based on ' + song.title + ' is ready.');
+    const label = radioSource === 'spotify'
+      ? 'Spotify' : (radioSource === 'musicatlas' ? 'MusicAtlas' : 'Local');
+    showGeneratedAlbum(album, tracks, [], label + ' radio based on ' + song.title + ' is ready.');
   }
 
   async function openLanguageMix(language) {
@@ -3037,6 +3426,19 @@
       };
     }
 
+    const musicatlasSave = el('musicatlas-save-proxy');
+    if (musicatlasSave && MV.musicatlas) {
+      musicatlasSave.onclick = () => {
+        const url = String((el('musicatlas-proxy-url') || {}).value || '').trim();
+        const saved = MV.musicatlas.setProxyUrl(url);
+        renderAccount();
+        renderAllSpotifyShelves();
+        toast(saved.error || (saved.proxyUrl
+          ? 'MusicAtlas proxy URL saved.'
+          : 'MusicAtlas proxy URL removed.'));
+      };
+    }
+
     el('clear-searches').onclick = () => { MV.store.clearRecentSearches(); toast('Recent searches cleared.'); };
     el('clear-history').onclick = () => {
       confirmModal('Clear listening history?', 'Recently played items and listening stats will be removed.', 'Clear', () => {
@@ -3420,6 +3822,25 @@
       }
     }
 
+    const musicatlas = MV.musicatlas ? MV.musicatlas.status() : null;
+    if (musicatlas) {
+      const proxyInput = el('musicatlas-proxy-url');
+      if (proxyInput) proxyInput.value = musicatlas.proxyUrl || '';
+      const musicatlasStatus = el('musicatlas-status');
+      if (musicatlasStatus) {
+        musicatlasStatus.textContent = musicatlas.error
+          ? musicatlas.error
+          : (musicatlas.direct
+            ? 'Ready · MusicAtlas is active directly on localhost.'
+            : (musicatlas.ready
+              ? 'Ready · MusicAtlas radio and recommendations are active.'
+              : (musicatlas.configured
+                ? 'Saved · publish the proxy URL, then reload the deployed site.'
+                : 'Not configured · local recommendations are active.')));
+        musicatlasStatus.classList.toggle('is-live', Boolean(musicatlas.ready && !musicatlas.error));
+      }
+    }
+
     const status = el('backend-status');
     const live = MV.api.isLive();
     if (status) {
@@ -3477,6 +3898,12 @@
         maybeResumeSpotifyImport(status);
       });
       maybeResumeSpotifyImport(MV.spotify.status());
+    }
+    if (MV.musicatlas && MV.musicatlas.onStatus) {
+      MV.musicatlas.onStatus(() => {
+        renderAccount();
+        renderAllSpotifyShelves();
+      });
     }
     renderHero();
     startHero();

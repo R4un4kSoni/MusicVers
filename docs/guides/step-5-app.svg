@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 500" role="img" aria-label="MusicVer Account page showing the MusicAtlas Radio card with the proxy URL field and a ready status">
+  <defs>
+    <linearGradient id="bg5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#efe7dd"/>
+      <stop offset="1" stop-color="#d6c9b8"/>
+    </linearGradient>
+    <filter id="sh5" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#3a2f1e" flood-opacity=".2"/>
+    </filter>
+  </defs>
+  <rect width="880" height="500" fill="url(#bg5)"/>
+
+  <g filter="url(#sh5)">
+    <rect x="140" y="26" width="600" height="448" rx="20" fill="#ffffff"/>
+  </g>
+  <text x="176" y="68" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#24211d">Account</text>
+  <text x="176" y="94" font-family="Arial, sans-serif" font-size="13" fill="#6b645b">Your settings are saved on this device only.</text>
+  <line x1="176" y1="112" x2="704" y2="112" stroke="#ece8e2"/>
+
+  <rect x="164" y="132" width="552" height="306" rx="16" fill="#fdfaf5" stroke="#d8c5ae" stroke-width="1.5"/>
+  <text x="190" y="166" font-family="Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="2" fill="#8b6f57">MUSICATLAS RADIO</text>
+  <text x="190" y="196" font-family="Arial, sans-serif" font-size="20" font-weight="700" fill="#24211d">Sonic song recommendations</text>
+  <text x="190" y="220" font-family="Arial, sans-serif" font-size="12" fill="#6b645b">Primary recommendation source. Playback stays on JioSaavn.</text>
+
+  <text x="190" y="254" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#4a443c">Your MusicAtlas proxy URL</text>
+  <rect x="190" y="266" width="400" height="42" rx="10" fill="#ffffff" stroke="#b99b76" stroke-width="2"/>
+  <text x="206" y="292" font-family="monospace" font-size="12" fill="#24211d">https://musicver-musicatlas-proxy…workers.dev</text>
+  <rect x="602" y="266" width="90" height="42" rx="10" fill="#24211d"/>
+  <text x="647" y="292" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Save</text>
+
+  <circle cx="198" cy="346" r="7" fill="#3f8a51"/>
+  <text x="214" y="351" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#2f6b3d">Ready · MusicAtlas radio and recommendations are active.</text>
+
+  <rect x="190" y="374" width="500" height="46" rx="10" fill="#f2e9dd"/>
+  <text x="210" y="402" font-family="Arial, sans-serif" font-size="12" fill="#6b5a45">Then open any song’s ◈ Radio button — it works on the live site.</text>
+
+  <path d="M676 292 q52 0 62 46" fill="none" stroke="#8b6f57" stroke-width="2" stroke-dasharray="5 5"/>
+  <path d="M730 338 l8 -12 l6 12 z" fill="#8b6f57"/>
+</svg>

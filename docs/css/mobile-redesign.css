@@ -1226,6 +1226,22 @@
   word-break: break-all;
 }
 
+.account-card--musicatlas {
+  background: linear-gradient(140deg, rgba(var(--mv-accent-rgb), .10), transparent 48%), var(--mv-surface);
+  border-color: var(--mv-border);
+}
+
+.account-card--musicatlas a { color: var(--mv-accent); }
+
+.mv-guide-cta {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mv-border);
+}
+
+.mv-guide-cta .field-note { margin-bottom: 10px; }
+.mv-guide-cta a.btn { text-decoration: none; }
+
 .spotify-actions {
   display: flex;
   flex-wrap: wrap;

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 500" role="img" aria-label="Terminal showing npm install and wrangler login, with a Cloudflare approval window">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dfe9ef"/>
+      <stop offset="1" stop-color="#c5d3de"/>
+    </linearGradient>
+    <filter id="sh3" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#1f2d38" flood-opacity=".25"/>
+    </filter>
+  </defs>
+  <rect width="880" height="500" fill="url(#bg3)"/>
+
+  <g filter="url(#sh3)">
+    <rect x="46" y="54" width="520" height="356" rx="14" fill="#1e2028"/>
+    <rect x="46" y="54" width="520" height="38" rx="14" fill="#2b2e38"/>
+    <rect x="46" y="82" width="520" height="10" fill="#2b2e38"/>
+  </g>
+  <circle cx="72" cy="73" r="6" fill="#e06c5d"/>
+  <circle cx="92" cy="73" r="6" fill="#e3b341"/>
+  <circle cx="112" cy="73" r="6" fill="#67b978"/>
+  <text x="306" y="78" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#9aa1ad">terminal — musicatlas-proxy</text>
+
+  <g font-family="monospace" font-size="14">
+    <text x="70" y="126" fill="#7ec699">~/musicver/worker/musicatlas-proxy</text>
+    <text x="70" y="156" fill="#e8e9ed">$ npm install -g wrangler</text>
+    <text x="70" y="180" fill="#8b93a1">added 1 package in 3s</text>
+    <text x="70" y="216" fill="#7ec699">~/musicver/worker/musicatlas-proxy</text>
+    <text x="70" y="246" fill="#e8e9ed">$ wrangler login</text>
+    <text x="70" y="270" fill="#e0c37a">⠋ Opening a browser window for authentication…</text>
+    <text x="70" y="294" fill="#8b93a1">If a browser does not open, use the link below.</text>
+    <text x="70" y="318" fill="#7aa7d8">https://dash.cloudflare.com/oauth2/authorize…</text>
+    <text x="70" y="354" fill="#7ec699">✓ You are logged in.</text>
+    <rect x="66" y="372" width="9" height="16" fill="#7ec699"/>
+  </g>
+
+  <g filter="url(#sh3)">
+    <rect x="596" y="120" width="244" height="212" rx="14" fill="#ffffff"/>
+    <rect x="596" y="120" width="244" height="40" rx="14" fill="#f6f4f0"/>
+    <rect x="596" y="148" width="244" height="12" fill="#f6f4f0"/>
+  </g>
+  <text x="618" y="146" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#3c3730">Cloudflare · Authorize Wrangler</text>
+  <circle cx="718" cy="198" r="26" fill="#f6821f"/>
+  <text x="718" y="207" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#ffffff">☁</text>
+  <text x="718" y="250" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#24211d">Allow access?</text>
+  <text x="718" y="270" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#6b645b">One-time approval</text>
+  <rect x="646" y="286" width="144" height="30" rx="15" fill="#f6821f"/>
+  <text x="718" y="306" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#ffffff">Allow</text>
+
+  <text x="46" y="452" font-family="Arial, sans-serif" font-size="13" fill="#41525f">If you already installed Wrangler, skip the first command and just run <tspan font-family="monospace" font-weight="700">wrangler login</tspan>.</text>
+</svg>

@@ -1719,6 +1719,8 @@
     },
 
     play_jiosaavn_track: playJioSaavn,
+    /** Lightweight full-length resolver used by recommendation names → playable track. */
+    find_full_track(title, artist) { return jioLiveMatch(title, artist); },
     rememberSpotify(items) { rememberSpotify(items, true); },
     play_provider_track(id, meta) {
       const key = String(id || '');

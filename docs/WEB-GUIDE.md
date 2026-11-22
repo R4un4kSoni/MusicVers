@@ -44,13 +44,13 @@ finished; use its × button to dismiss it.
   line to seek to that moment. Spotify recommendations are no longer shown in
   the queue.
 - Song Radio is available from the ◈ button in the player and Flow State, and
-  from each song's three-dot menu. With Spotify connected it builds a related
-  mix of up to 50 tracks; without a connection it falls back to a local mix.
-  Playback still resolves to full-length JioSaavn audio.
+  from each song's three-dot menu. It builds a related mix of up to 50 tracks
+  using MusicAtlas first, then Spotify when connected, otherwise a song-specific
+  local mix. Playback still resolves to full-length JioSaavn audio.
 - Playlist covers are generated automatically as a 2×2 collage of the first four
   songs, unless you choose your own artwork. The `+` button in a playlist opens
   a large picker with ten fresh suggestions on each refresh, drawn from your
-  listening activity and, when connected, live Spotify recommendations.
+  listening activity and live recommendations from MusicAtlas or Spotify.
 - Reopening the app or returning to its tab re-rolls the feed so the same small
   set of songs is not repeated. Advanced settings → Soft theme change replaces
   the flipping-tile theme animation with a slow white↔black background fade.
@@ -146,9 +146,30 @@ picker reopens automatically. Spotify only allows reading the items of playlists
 you own or collaborate on, so duplicate any followed playlist in Spotify before
 importing your copy.
 
-The same optional connection powers the live recommendation shelves, playlist
-suggestions and Song Radio. No extra permission is requested; if you skip the
-Client ID setup, those features quietly use the bundled catalogue instead.
+The optional Spotify connection powers the live recommendation shelves, playlist
+suggestions and Song Radio. No extra permission is requested; MusicAtlas is the
+primary recommendation source, so those features still work if you skip the
+Client ID setup.
+
+## MusicAtlas recommendations
+
+MusicAtlas is the primary Song Radio provider. It compares the sound of the seed
+recording and returns only track and artist names; musicVer never plays
+MusicAtlas audio or uses MusicAtlas artwork. Recommended names are matched to
+full-length JioSaavn streams at play time, and a known different language
+(Hindi ↔ English) is filtered out.
+
+On `localhost`, the browser calls MusicAtlas's public MCP endpoint directly with
+no API key. GitHub Pages origins are rejected by that endpoint, so the published
+site sends the same single `find_similar_tracks` call through the tiny Worker in
+`worker/musicatlas-proxy`. Deploy it once and paste its URL into
+Account → **MUSICATLAS RADIO**; the URL is saved only in this browser. No
+MusicAtlas API key is stored.
+
+Spotify is used next when connected. If MusicAtlas is unavailable, rate-limited
+or offline, the app falls back to Spotify, then to a song-specific local mix.
+Responses are cached per song in memory, and MusicAtlas is credited in the radio
+notice and shelf labels. Please follow the MusicAtlas public/MCP fair-use terms.
 
 ## Browser support
 
@@ -170,6 +191,8 @@ localStorage.removeItem('musicver.web.cache.v1');
 localStorage.removeItem('musicver.web.discovery.v1');
 localStorage.removeItem('musicver.web.localLibrary.v1');
 localStorage.removeItem('musicver.web.folderName');
+localStorage.removeItem('musicver.musicatlas.proxy');
+localStorage.removeItem('musicver.musicatlas.error');
 indexedDB.deleteDatabase('musicver-web');
 indexedDB.deleteDatabase('musicver-artwork-v2');
 location.reload();
