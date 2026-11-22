@@ -676,3 +676,21 @@ body.no-ambience .ambient { opacity: 0; }
   from { transform: rotateX(0); }
   to { transform: rotateX(180deg); }
 }
+
+/* Optional slow crossfade (Advanced settings → Soft theme change). */
+.theme-crossfade {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  pointer-events: none;
+  animation: theme-crossfade-out 1.4s ease-in-out both;
+}
+
+@keyframes theme-crossfade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-crossfade { animation-duration: .01ms; }
+}

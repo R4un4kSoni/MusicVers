@@ -36,6 +36,10 @@
   let profileEditorOpen = false;
   let selectedStoryMonth = '';
   let storyIndex = 0;
+  // Bumped whenever the feed is re-rolled so Spotify picks are never a stale
+  // cached copy of the same handful of songs.
+  let spotifyFeedNonce = 1;
+  let addSongsPage = 0;
 
   function el(id) { return document.getElementById(id); }
   function esc(value) {
@@ -134,12 +138,15 @@
     if (!root) return;
     root.hidden = true;
     root.innerHTML = '';
+    root.classList.remove('modal-root--wide');
     modalClose = null;
   }
 
-  function openModal(content, onMount) {
+  function openModal(content, onMount, className) {
     const root = el('modal-root');
-    root.innerHTML = '<div class="modal" role="dialog" aria-modal="true">' + content + '</div>';
+    const classes = 'modal' + (className ? ' ' + className : '');
+    root.classList.toggle('modal-root--wide', className === 'modal--add-songs');
+    root.innerHTML = '<div class="' + classes + '" role="dialog" aria-modal="true">' + content + '</div>';
     root.hidden = false;
     modalClose = closeModal;
     root.onclick = (event) => { if (event.target === root) closeModal(); };
@@ -189,6 +196,68 @@
       ctx.drawImage(image, (size - width) / 2, (size - height) / 2, width, height);
       return canvas.toDataURL('image/jpeg', .86);
     });
+  }
+
+  function loadCollageImage(src) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      // Remote CDNs may refuse CORS; a tainted canvas is caught by the caller
+      // and that quadrant falls back to a generated cover.
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+  }
+
+  /** Spotify-style 2x2 collage built from the first four songs in a playlist. */
+  async function autoCoverForPlaylist(playlistId) {
+    const playlist = MV.store.getPlaylist(playlistId);
+    // A cover chosen in the editor is final. A generated collage may be
+    // rebuilt as the first four songs fill in.
+    if (!playlist || (playlist.cover && !playlist.autoCover)) return false;
+    const songs = (playlist.songs || []).slice(0, 4);
+    if (!songs.length) return false;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const half = 256;
+    ctx.fillStyle = '#e8e2d9';
+    ctx.fillRect(0, 0, 512, 512);
+    for (let index = 0; index < 4; index += 1) {
+      const song = songs[index];
+      const x = (index % 2) * half;
+      const y = Math.floor(index / 2) * half;
+      let art = null;
+      if (song) {
+        const src = song.cover || song.image ||
+          (D.coverFor ? D.coverFor(song.title || 'Music', song.title || 'Music', false) : '');
+        if (src) art = await loadCollageImage(src);
+      }
+      if (art && art.width) {
+        try {
+          const scale = Math.max(half / art.width, half / art.height);
+          const width = art.width * scale;
+          const height = art.height * scale;
+          ctx.drawImage(art, x + (half - width) / 2, y + (half - height) / 2, width, height);
+        } catch (error) {
+          ctx.fillStyle = '#d8d2c8';
+          ctx.fillRect(x, y, half, half);
+        }
+      } else {
+        ctx.fillStyle = index % 2 === 0 ? '#e5ded2' : '#d8d2c8';
+        ctx.fillRect(x, y, half, half);
+      }
+    }
+    try {
+      await MV.api.setPlaylistCover(playlist.id, canvas.toDataURL('image/jpeg', .88));
+      MV.store.setPlaylistAutoCover(playlist.id, true);
+      renderLibrary();
+      if (MV.currentPlaylistId === playlist.id) renderPlaylistDetail();
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   /* Interactive cropper. The guide shape matches the final artwork:
@@ -511,13 +580,44 @@
   /** A new seed on every page load keeps the home mixes feeling fresh. */
   function nextHomeRefreshId() {
     const key = 'musicver.home.refresh';
+    // localStorage survives new tabs too, so even a fresh window gets a new
+    // mix instead of replaying the first-ever feed.
     try {
-      const next = (Number(sessionStorage.getItem(key)) || 0) + 1;
-      sessionStorage.setItem(key, String(next));
+      const next = (Number(localStorage.getItem(key)) || 0) + 1;
+      localStorage.setItem(key, String(next));
       return next;
     } catch (error) {
-      return (Math.random() * 100000) | 0 || 1;
+      try {
+        const next = (Number(sessionStorage.getItem(key)) || 0) + 1;
+        sessionStorage.setItem(key, String(next));
+        return next;
+      } catch (inner) {
+        return (Math.random() * 100000) | 0 || 1;
+      }
     }
+  }
+
+  /** Re-roll the seed and invalidate cached Spotify picks for a new feed. */
+  function rollFeedSeed() {
+    MV.homeRefreshId = nextHomeRefreshId();
+    spotifyFeedNonce += 1;
+    const heroes = D.heroes || [];
+    const offset = heroes.length ? (MV.homeRefreshId - 1) % heroes.length : 0;
+    MV.homeHeroes = heroes.map((_, index) => heroes[(index + offset) % heroes.length]);
+    MV.heroIndex = 0;
+  }
+
+  /** Called on load, tab return and webview restore: a genuinely fresh feed. */
+  function refreshHomeFeed() {
+    rollFeedSeed();
+    renderHero();
+    startHero();
+    renderHome();
+    renderFeatureCards();
+    renderHomeChrome();
+    renderDiscoverPicks();
+    renderRecentlyExplored();
+    renderAllSpotifyShelves();
   }
 
   function hashSeed(text) {
@@ -756,25 +856,89 @@
       artists: artists,
       genres: (source.genres || []).slice(0, 3).map((genre) => String(genre || '').toLowerCase()).filter(Boolean),
       queries: queries,
-      titles: (source.titles || []).slice(0, 3).map((title) => String(title || '')).filter(Boolean)
+      titles: (source.titles || []).slice(0, 3).map((title) => String(title || '')).filter(Boolean),
+      // Must survive compaction: Spotify's cache key uses it to know that a
+      // re-rolled feed needs a brand-new request instead of yesterday's picks.
+      nonce: source.nonce || 0
+    };
+  }
+
+  function uniqueSeedValues(values) {
+    const seen = new Set();
+    return (values || []).filter((value) => {
+      if (value == null || value === '') return false;
+      const key = String(value).toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function rotatingSlice(list, count, salt) {
+    const items = list || [];
+    if (!items.length) return [];
+    const offset = ((MV.homeRefreshId + (salt || 0) - 1) % items.length + items.length) % items.length;
+    const picked = [];
+    for (let index = 0; index < Math.min(count, items.length); index += 1) {
+      picked.push(items[(offset + index) % items.length]);
+    }
+    return picked;
+  }
+
+  /** Taste gathered on this device: plays, recents and liked songs. */
+  function userSeedProfile() {
+    const state = MV.store.state;
+    const tracks = [];
+    const queries = [];
+    const addItem = (item) => {
+      if (!item) return;
+      const id = spotifyRawId(item);
+      if (id) {
+        if (tracks.indexOf(id) < 0) tracks.push(id);
+      } else if (item.title) {
+        const text = String(item.title) + (item.artist ? ' ' + String(item.artist) : '');
+        if (queries.indexOf(text) < 0) queries.push(text);
+      }
+    };
+    const stats = MV.store.playStats ? MV.store.playStats() : null;
+    (stats && stats.songs ? stats.songs : []).forEach(addItem);
+    (state.recentlyPlayed || []).slice().reverse().forEach(addItem);
+    (state.liked || []).slice().reverse().forEach(addItem);
+    return { tracks: tracks.slice(0, 3), queries: queries.slice(0, 3) };
+  }
+
+  function personalizeSeeds(seeds) {
+    const source = seeds || {};
+    const profile = userSeedProfile();
+    return {
+      tracks: uniqueSeedValues([].concat(source.tracks || [], profile.tracks)).slice(0, 5),
+      artists: uniqueSeedValues((source.artists || []).map(spotifyRawId)).slice(0, 3),
+      genres: uniqueSeedValues(source.genres || []).slice(0, 3),
+      queries: uniqueSeedValues([].concat(source.queries || [], profile.queries)).slice(0, 4),
+      titles: uniqueSeedValues(source.titles || []).slice(0, 3),
+      // Cache-busting token: a fresh feed always asks Spotify again.
+      nonce: spotifyFeedNonce
     };
   }
 
   function spotifySeedsForHome() {
     const trending = (MV.discoverData && MV.discoverData.trending) || D.songs || [];
-    return {
-      tracks: trending.slice(0, 2),
-      queries: [genreName(D.genres && D.genres[0]), 'trending hits'].filter(Boolean)
-    };
+    const genres = D.genres || [];
+    const genre = genres.length ? genreName(genres[(MV.homeRefreshId - 1) % genres.length]) : '';
+    return personalizeSeeds({
+      tracks: rotatingSlice(trending, 2, 0),
+      queries: [genre, 'trending hits'].filter(Boolean)
+    });
   }
 
   function spotifySeedsForDiscover() {
-    const recent = (MV.store.state.recentSearches || []).slice(0, 2);
-    const genres = (D.genres || []).slice(0, 2).map(genreName).filter(Boolean);
-    return {
-      queries: recent.concat(genres),
-      tracks: ((MV.discoverData && MV.discoverData.trending) || []).slice(0, 2)
-    };
+    const recent = (MV.store.state.recentSearches || []).slice().reverse();
+    const genres = (D.genres || []).map(genreName).filter(Boolean);
+    const trending = (MV.discoverData && MV.discoverData.trending) || [];
+    return personalizeSeeds({
+      queries: rotatingSlice(recent, 2, 1).concat(rotatingSlice(genres, 2, 2)),
+      tracks: rotatingSlice(trending, 2, 3)
+    });
   }
 
   function spotifySeedsForResults() {
@@ -782,40 +946,37 @@
     const query = MV.searchState.query || '';
     // Do not put the raw query in `titles`: local recommendations exclude
     // seed titles, which would discard every song matching the search.
-    return {
+    return personalizeSeeds({
       queries: [query].filter(Boolean),
       tracks: result && result.songs ? result.songs.slice(0, 2) : [],
       artists: result && result.artists ? result.artists.slice(0, 1) : []
-    };
+    });
   }
 
   function spotifySeedsForLibrary() {
     const state = MV.store.state;
-    return {
-      tracks: (state.liked || []).slice(0, 2),
-      queries: (state.savedAlbums || []).slice(0, 2).map((album) => album.title).filter(Boolean),
-      titles: (state.playlists || []).slice(0, 1).map((playlist) => playlist.name).filter(Boolean)
-    };
+    return personalizeSeeds({
+      tracks: rotatingSlice(state.liked || [], 2, 4),
+      queries: rotatingSlice(state.savedAlbums || [], 2, 5).map((album) => album.title).filter(Boolean)
+    });
   }
 
   function spotifySeedsForPlaylist() {
     const playlist = MV.store.getPlaylist(MV.currentPlaylistId);
     if (!playlist) return { queries: [] };
-    return {
-      tracks: (playlist.songs || []).slice(0, 2),
-      queries: [playlist.name].filter(Boolean),
-      titles: [playlist.name].filter(Boolean)
-    };
+    return personalizeSeeds({
+      tracks: rotatingSlice(playlist.songs || [], 2, 6),
+      queries: [playlist.name].filter(Boolean)
+    });
   }
 
   function spotifySeedsForAlbum() {
     const state = MV.albumState;
     if (!state || !state.album) return { queries: [] };
-    return {
-      tracks: (state.tracks || []).slice(0, 2),
-      queries: [state.album.title, state.album.artist].filter(Boolean),
-      titles: [state.album.title].filter(Boolean)
-    };
+    return personalizeSeeds({
+      tracks: rotatingSlice(state.tracks || [], 2, 7),
+      queries: [state.album.title, state.album.artist].filter(Boolean)
+    });
   }
 
   function spotifySeedsForArtist() {
@@ -823,12 +984,12 @@
     if (!state) return { queries: [] };
     const artist = (state.details && state.details.artist) || state.artist || {};
     const name = artist.name || artist.title || '';
-    return {
-      tracks: (state.songs || []).slice(0, 2),
+    return personalizeSeeds({
+      tracks: rotatingSlice(state.songs || [], 2, 8),
       artists: [artist],
-      queries: [name].filter(Boolean),
-      titles: [name].filter(Boolean)
-    };
+      genres: (artist.genres || []).slice(0, 3),
+      queries: [name].filter(Boolean)
+    });
   }
 
   function renderSpotifyShelf(name, seeds) {
@@ -1219,7 +1380,11 @@
           const name = root.querySelector('#playlist-edit-name').value.trim();
           if (!name) { toast('Give your playlist a name first.'); return; }
           await MV.api.renamePlaylist(playlist.id, name);
-          if (cover !== (playlist.cover || '')) await MV.api.setPlaylistCover(playlist.id, cover);
+          if (cover !== (playlist.cover || '')) {
+            await MV.api.setPlaylistCover(playlist.id, cover);
+            // Once the user picks artwork, stop regenerating the collage.
+            MV.store.setPlaylistAutoCover(playlist.id, false);
+          }
           closeModal();
           renderLibrary();
           if (MV.currentPlaylistId === playlist.id) renderPlaylistDetail();
@@ -1307,49 +1472,94 @@
 
     return Array.from(found.values())
       .sort((a, b) => b.score - a.score)
-      .slice(0, 18)
+      .slice(0, 200)
       .map((item) => item.song);
   }
 
   function playlistAddSongsModal(playlist) {
     const live = MV.store.getPlaylist(playlist.id) || playlist;
-    const suggestions = suggestedSongsForPlaylist(live);
+    const candidates = suggestedSongsForPlaylist(live);
+    const pageSize = 10;
+    let pageCount = Math.max(1, Math.ceil(candidates.length / pageSize));
+    addSongsPage = 0;
+
+    const renderRows = (root) => {
+      const list = root.querySelector('#playlist-suggestions');
+      if (!list) return;
+      const start = candidates.length ? (addSongsPage * pageSize) % candidates.length : 0;
+      const songs = [];
+      for (let index = 0; index < pageSize && index < candidates.length; index += 1) {
+        songs.push(candidates[(start + index) % candidates.length]);
+      }
+      list.innerHTML = songs.map((song) => {
+        const key = ref(song);
+        return '<div class="suggestion-item">' +
+          '<span class="suggestion-item__art">' + image(song.cover, song.title, false, song, 'song') + '</span>' +
+          '<span class="suggestion-item__copy"><strong>' + esc(song.title) + '</strong>' +
+          '<span>' + esc(song.artist) + '</span></span>' +
+          '<button class="suggestion-item__add" data-add-song="' + key + '" aria-label="Add ' + esc(song.title) + '" title="Add song">+</button>' +
+          '</div>';
+      }).join('');
+      const page = root.querySelector('#suggestion-page');
+      if (page) page.textContent = ((addSongsPage % pageCount) + 1) + ' / ' + pageCount;
+      list.querySelectorAll('[data-add-song]').forEach((button) => {
+        button.onclick = async () => {
+          const song = registry[button.dataset.addSong];
+          const current = MV.store.getPlaylist(live.id) || live;
+          const added = await MV.api.addToPlaylist(current, song);
+          if (added) {
+            button.disabled = true;
+            button.textContent = '✓';
+            toast('Added to ' + current.name);
+            // A locally-created playlist has no artwork; build one from its
+            // first four songs just like Spotify does.
+            await autoCoverForPlaylist(current.id);
+          } else {
+            toast('Already in that playlist.');
+          }
+        };
+      });
+    };
+
     openModal(
       '<p class="eyebrow">ADD SONGS</p><h2>Add to ' + esc(live.name) + '</h2>' +
-      '<p>Picked from your listening activity and liked songs.</p>' +
-      (suggestions.length
-        ? '<div class="suggestion-list" id="playlist-suggestions">' + suggestions.map((song, index) => {
-          const key = ref(song);
-          return '<div class="suggestion-item">' +
-            '<span class="suggestion-item__art">' + image(song.cover, song.title, false, song, 'song') + '</span>' +
-            '<span class="suggestion-item__copy"><strong>' + esc(song.title) + '</strong>' +
-            '<span>' + esc(song.artist) + '</span></span>' +
-            '<button class="suggestion-item__add" data-add-song="' + key + '" aria-label="Add ' + esc(song.title) + '" title="Add song">+</button>' +
-            '</div>';
-        }).join('') + '</div>'
+      '<p>Ten fresh picks each time. Add what you like, then refresh for more.</p>' +
+      (candidates.length
+        ? '<div class="suggestion-list" id="playlist-suggestions"></div>'
         : '<p class="field-note">No suggestions yet. Play a few songs or like something first.</p>') +
-      '<div class="modal__actions"><button class="btn btn--dark" data-modal="done">Done</button></div>',
+      '<div class="modal__actions"><span class="suggestion-page" id="suggestion-page"></span>' +
+      '<button class="btn btn--dark" data-modal="done">Done</button>' +
+      '<button class="btn btn--outline" id="suggestion-refresh">↻ Refresh picks</button></div>',
       (root) => {
         root.querySelector('[data-modal="done"]').onclick = () => {
           closeModal();
           renderPlaylistDetail();
           renderLibrary();
         };
-        root.querySelectorAll('[data-add-song]').forEach((button) => {
-          button.onclick = async () => {
-            const song = registry[button.dataset.addSong];
-            const current = MV.store.getPlaylist(live.id) || live;
-            const added = await MV.api.addToPlaylist(current, song);
-            if (added) {
-              button.disabled = true;
-              button.textContent = '✓';
-              toast('Added to ' + current.name);
-            } else {
-              toast('Already in that playlist.');
-            }
-          };
-        });
-      }
+        const refresh = root.querySelector('#suggestion-refresh');
+        if (refresh && candidates.length) refresh.onclick = () => { addSongsPage += 1; renderRows(root); };
+        renderRows(root);
+        // When Spotify is connected, widen the pool with live recommendations
+        // built from this device's taste instead of only the bundled catalog.
+        if (MV.spotify && MV.spotify.status && MV.spotify.status().ready) {
+          MV.spotify.recommendFor(personalizeSeeds({ queries: [live.name].filter(Boolean) }), 30, { fresh: true })
+            .then((data) => {
+              const extra = ((data && data.tracks) || []).filter((song) => song && song.title);
+              if (!extra.length || !root.isConnected) return;
+              const keys = new Set(candidates.map(suggestionKey));
+              extra.forEach((song) => {
+                if (listContains(live.songs, song) || keys.has(suggestionKey(song))) return;
+                keys.add(suggestionKey(song));
+                candidates.push(song);
+              });
+              pageCount = Math.max(1, Math.ceil(candidates.length / pageSize));
+              addSongsPage = 0;
+              renderRows(root);
+            })
+            .catch(() => { /* keep the local pool */ });
+        }
+      },
+      'modal--add-songs'
     );
   }
 
@@ -1371,6 +1581,7 @@
             const playlist = MV.store.getPlaylist(button.dataset.pl);
             const added = await MV.api.addToPlaylist(playlist, song);
             closeModal();
+            if (added) await autoCoverForPlaylist(playlist.id);
             renderLibrary();
             toast(added ? 'Added to ' + playlist.name : 'Already in that playlist.');
           };
@@ -1514,6 +1725,7 @@
       '<p class="eyebrow">SONG OPTIONS</p><h2>' + esc(song.title) + '</h2><p>' + esc(song.artist) + '</p>' +
       '<div class="account-actions" style="margin-top:18px">' +
       '<button class="btn btn--outline" data-sm="play">▶ Play now</button>' +
+      '<button class="btn btn--outline" data-sm="radio">◈ Song radio</button>' +
       '<button class="btn btn--outline" data-sm="queue">＋ Add to queue</button>' +
       '<button class="btn btn--outline" data-sm="like">' + (liked ? '♥ Remove from Liked' : '♡ Add to Liked') + '</button>' +
       '<button class="btn btn--outline" data-sm="playlist">≋ Add to playlist</button>' +
@@ -1523,6 +1735,7 @@
       (root) => {
         root.querySelector('[data-modal="done"]').onclick = closeModal;
         root.querySelector('[data-sm="play"]').onclick = () => { closeModal(); MV.player.play(song); };
+        root.querySelector('[data-sm="radio"]').onclick = () => { closeModal(); openSongRadio(song); };
         root.querySelector('[data-sm="queue"]').onclick = () => { closeModal(); MV.player.enqueue(song); };
         root.querySelector('[data-sm="like"]').onclick = async () => {
           closeModal();
@@ -1636,6 +1849,50 @@
       generated: true
     };
     showGeneratedAlbum(album, tracks, [], 'Built a ' + tracks.length + '-song mix around ' + song.title + '.');
+  }
+
+  function spotifySeedsForSong(song) {
+    const id = spotifyRawId(song);
+    return personalizeSeeds({
+      tracks: id ? [id] : [],
+      queries: [song && song.title, song && song.artist].filter(Boolean)
+    });
+  }
+
+  /** Song Radio: Spotify chooses related tracks, our player plays them. */
+  async function openSongRadio(song) {
+    if (!song) return;
+    rememberAlbumReturn();
+    let related = [];
+    try {
+      if (MV.spotify && MV.spotify.songRadio) {
+        const data = await MV.spotify.songRadio(song, 50);
+        related = ((data && data.tracks) || []).filter(Boolean);
+      } else if (MV.spotify) {
+        const data = await MV.spotify.recommendFor(spotifySeedsForSong(song), 30, { fresh: true });
+        related = ((data && data.tracks) || []).filter(Boolean);
+      }
+    } catch (error) {
+      related = [];
+    }
+    if (!related.length) {
+      toast('Spotify radio is unavailable here — building a local mix instead.');
+      await openSongMix(song);
+      return;
+    }
+    const tracks = uniqueItems([song].concat(related), itemKey).slice(0, 50);
+    if (MV.webApi && MV.webApi.rememberSpotify) {
+      try { MV.webApi.rememberSpotify(tracks); } catch (error) { /* best effort */ }
+    }
+    const album = {
+      id: 'songradio-' + String(song.id || D.hash(song.title)).replace(/\W/g, ''),
+      title: song.title + ' Radio',
+      artist: song.artist || 'MusicVer Radio',
+      cover: song.cover,
+      kind: 'mix',
+      generated: true
+    };
+    showGeneratedAlbum(album, tracks, [], 'Radio based on ' + song.title + ' is ready.');
   }
 
   async function openLanguageMix(language) {
@@ -2371,6 +2628,9 @@
         case 'open-song-mix':
           await openSongMix(item);
           break;
+        case 'song-radio':
+          await openSongRadio(item);
+          break;
         case 'open-album-catalog':
           await openAlbumCatalog(item);
           break;
@@ -2480,6 +2740,19 @@
       const song = MV.player.state.current;
       if (!song) { toast('Play a song first.'); return; }
       addToPlaylistModal(song);
+    };
+    const playerRadio = el('player-radio');
+    if (playerRadio) playerRadio.onclick = () => {
+      const song = MV.player.state.current;
+      if (!song) { toast('Play a song first.'); return; }
+      openSongRadio(song);
+    };
+    const flowRadio = el('flow-radio');
+    if (flowRadio) flowRadio.onclick = () => {
+      const song = MV.player.state.current;
+      if (!song) { toast('Play a song first.'); return; }
+      closeFlow();
+      openSongRadio(song);
     };
     el('flow-repeat').onclick = () => MV.player.cycleRepeat();
     el('volume').oninput = (event) => MV.player.setVolume(event.target.value);
@@ -2851,6 +3124,11 @@
       darkSetting.onchange = (event) =>
         toggleTheme(event.target.closest('.switch-row') || event.target);
     }
+    const crossfadeSetting = el('setting-crossfade-theme');
+    if (crossfadeSetting) {
+      crossfadeSetting.onchange = (event) =>
+        MV.store.setPreference('themeCrossfadeOnly', event.target.checked);
+    }
   }
 
   /* ---------------- theme ---------------- */
@@ -2880,10 +3158,29 @@
     const next = theme === 'dark' ? 'dark' : 'light';
     if (current === next) return;
 
-    applyTheme(next);
-
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let outgoing = THEME_BG[current];
+    if (!reduce && MV.store.state.themeCrossfadeOnly) {
+      try {
+        const cssBg = getComputedStyle(document.documentElement).getPropertyValue('--mv-bg').trim();
+        if (cssBg) outgoing = cssBg;
+      } catch (error) { /* fall back to the theme constant */ }
+    }
+
+    applyTheme(next);
     if (reduce) return;
+
+    if (MV.store.state.themeCrossfadeOnly) {
+      // No tile flip: one full-screen veil in the old background colour fades
+      // away, so the page appears to drift from white to black (or back).
+      const veil = document.createElement('div');
+      veil.className = 'theme-crossfade';
+      veil.setAttribute('aria-hidden', 'true');
+      veil.style.background = outgoing;
+      document.body.appendChild(veil);
+      window.setTimeout(() => { if (veil.parentNode) veil.remove(); }, 1600);
+      return;
+    }
 
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -3055,6 +3352,8 @@
     const speed = Number.isFinite(raw) && raw > 0 ? Math.min(2.4, Math.max(0.6, raw)) : 1;
     input.value = speed.toFixed(1);
     updateLyricsSpeedLabel(speed);
+    const crossfade = el('setting-crossfade-theme');
+    if (crossfade) crossfade.checked = Boolean(MV.store.state.themeCrossfadeOnly);
   }
 
   function renderAccount() {
@@ -3161,9 +3460,7 @@
   }
 
   function init() {
-    MV.homeRefreshId = nextHomeRefreshId();
-    const heroOffset = D.heroes.length ? (MV.homeRefreshId - 1) % D.heroes.length : 0;
-    MV.homeHeroes = D.heroes.map((_, index) => D.heroes[(index + heroOffset) % D.heroes.length]);
+    rollFeedSeed();
     initImageFallbacks();
     // Hidden overlays must not be reachable by Tab before their first open.
     if (el('flow')) el('flow').inert = true;
@@ -3228,12 +3525,12 @@
   }
 
   MV.ui = {
-    init, renderAll, renderHome, renderLibrary, renderAccount, renderAdvanced, renderGenres,
+    init, renderAll, renderHome, refreshHomeFeed, renderLibrary, renderAccount, renderAdvanced, renderGenres,
     renderPlaylistDetail, renderResults, renderRecentSearches,
     updatePlayer, updateProgress, renderQueue, renderFlow,
     navigate, setLibraryTab, openPlaylist, openAlbum, renderAlbum, openArtist, openFlow, closeFlow,
     openQueue, closeQueue, toggleQueue, applyTheme, setThemeWithAnimation, toggleTheme,
-    openCreatePlaylist, songMenu, addToPlaylistModal, coverPicker,
+    openCreatePlaylist, songMenu, addToPlaylistModal, coverPicker, autoCoverForPlaylist, openSongRadio,
     runSearch, setHero, toast, loadImageFile, readCoverFile, openImageCropper, fmt, esc,
     renderSpotifyShelf, renderAllSpotifyShelves, openSpotifyImportModal, releaseFocus
   };

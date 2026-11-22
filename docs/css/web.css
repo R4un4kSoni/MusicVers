@@ -594,6 +594,7 @@ input[type="text"], input[type="search"] { height: 36px; padding: 0 11px; }
 .playlist-action:hover { background: #fff; box-shadow: 0 6px 16px rgba(43, 37, 28, .12); }
 .playlist-action svg { width: 20px; height: 20px; fill: currentColor; }
 .player .control--add { font-size: 20px; font-weight: 300; line-height: 1; }
+.player .control--radio { font-size: 18px; font-weight: 300; line-height: 1; }
 
 /* ---------------- song suggestions modal ---------------- */
 .suggestion-list {

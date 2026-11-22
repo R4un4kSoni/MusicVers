@@ -72,6 +72,14 @@
     MV.ui.renderAll();
   }
 
+  async function refreshBackendAndFeed() {
+    if (MV.api.isLive()) {
+      await loadCatalogue();
+      await loadBackendState();
+    }
+    MV.ui.refreshHomeFeed();
+  }
+
   async function boot() {
     // Apply the saved choice before the first paint to avoid a light flash.
     MV.ui.applyTheme(MV.store.state.theme);
@@ -91,11 +99,26 @@
       MV.ui.renderAccount();
       await syncBackend();
       MV.ui.renderAll();
+      MV.ui.refreshHomeFeed();
     });
 
+    // Reopening the web (or returning to its tab) is a new listening session:
+    // re-roll the feed and refresh live catalogue data instead of replaying the
+    // same handful of songs from the first load.
+    let lastFeedRefresh = 0;
+    const maybeRefreshFeed = () => {
+      const now = Date.now();
+      if (now - lastFeedRefresh < 1500) return;
+      lastFeedRefresh = now;
+      refreshBackendAndFeed().catch((error) =>
+        console.info('musicVer: feed refresh skipped', error.message));
+    };
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) MV.player.notify();
+      if (document.hidden) return;
+      MV.player.notify();
+      maybeRefreshFeed();
     });
+    window.addEventListener('pageshow', (event) => { if (event.persisted) maybeRefreshFeed(); });
 
     const canRegisterWorker = 'serviceWorker' in navigator &&
       (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') &&

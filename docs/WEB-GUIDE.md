@@ -43,6 +43,18 @@ finished; use its × button to dismiss it.
   line stays large and sharp while nearby lines shrink, tilt and blur. Tap a
   line to seek to that moment. Spotify recommendations are no longer shown in
   the queue.
+- Song Radio is available from the ◈ button in the player and Flow State, and
+  from each song's three-dot menu. With Spotify connected it builds a related
+  mix of up to 50 tracks; without a connection it falls back to a local mix.
+  Playback still resolves to full-length JioSaavn audio.
+- Playlist covers are generated automatically as a 2×2 collage of the first four
+  songs, unless you choose your own artwork. The `+` button in a playlist opens
+  a large picker with ten fresh suggestions on each refresh, drawn from your
+  listening activity and, when connected, live Spotify recommendations.
+- Reopening the app or returning to its tab re-rolls the feed so the same small
+  set of songs is not repeated. Advanced settings → Soft theme change replaces
+  the flipping-tile theme animation with a slow white↔black background fade.
+  Reduced-motion preferences always skip both animations.
 - Choose a local music folder (Chrome/Edge) or select local audio files
   (other browsers). Files stay on your device and are never uploaded.
 
@@ -133,6 +145,10 @@ Apple/Spotify 30-second previews are never used. After the reconnect, the import
 picker reopens automatically. Spotify only allows reading the items of playlists
 you own or collaborate on, so duplicate any followed playlist in Spotify before
 importing your copy.
+
+The same optional connection powers the live recommendation shelves, playlist
+suggestions and Song Radio. No extra permission is requested; if you skip the
+Client ID setup, those features quietly use the bundled catalogue instead.
 
 ## Browser support
 

@@ -25,6 +25,7 @@
     playEvents: [],
     demoSeeded: false,
     theme: 'light',
+    themeCrossfadeOnly: false,
     volume: 70,
     shuffle: false,
     repeat: 'off'
@@ -197,6 +198,15 @@
       const playlist = store.getPlaylist(id);
       if (!playlist) return false;
       playlist.cover = cover;
+      save();
+      return true;
+    },
+
+    /** Marks a generated collage so it can be refreshed, unlike a chosen cover. */
+    setPlaylistAutoCover(id, generated) {
+      const playlist = store.getPlaylist(id);
+      if (!playlist) return false;
+      playlist.autoCover = Boolean(generated);
       save();
       return true;
     },

@@ -349,6 +349,8 @@
       spotifyId: String(raw.id),
       spotifyUrl: (raw.external_urls && raw.external_urls.spotify) || '',
       previewUrl: raw.preview_url || '',
+      // Kept so a single track can seed its own artists for Song Radio.
+      seedArtistIds: (Array.isArray(raw.artists) ? raw.artists.map((artist) => artist && artist.id).filter(Boolean) : []),
       raw: raw
     };
     trackIndex.set(id, track);
@@ -721,9 +723,26 @@
     return { available: false, source: 'local', tracks: tracks };
   }
 
-  async function recommendations(seeds, limit) {
+  /** Recover the Spotify track + artist IDs carried by a track object. */
+  function seedIdsForTrack(value) {
+    if (!value) return { trackId: '', artistIds: [], genres: [] };
+    const isObject = typeof value === 'object';
+    const raw = isObject && (value.raw || value);
+    const candidates = isObject && Array.isArray(value.seedArtistIds)
+      ? value.seedArtistIds
+      : (raw && Array.isArray(raw.artists) ? raw.artists.map((artist) => artist && artist.id) : []);
+    const artistIds = [];
+    candidates.forEach((artist) => {
+      const id = spotifyIdOf(artist);
+      if (id && artistIds.indexOf(id) < 0) artistIds.push(id);
+    });
+    return { trackId: spotifyIdOf(value), artistIds: artistIds, genres: [] };
+  }
+
+  async function recommendations(seeds, limit, options) {
     const source = seeds || {};
-    const size = Math.max(1, Math.min(30, Number(limit) || 10));
+    const opts = options || {};
+    const size = Math.max(1, Math.min(Number(opts.max) || 100, Number(limit) || 10));
     const trackIds = [];
     const artistIds = [];
     const genres = [];
@@ -742,10 +761,19 @@
     });
 
     if (!trackIds.length && !artistIds.length && !genres.length && seedText(source).length) {
-      const found = await search(seedText(source)[0]);
-      if (found.tracks.length) {
-        trackIds.push(spotifyIdOf(found.tracks[0]));
-        if (found.artists.length) artistIds.push(spotifyIdOf(found.artists[0]));
+      // Resolving only the first text seed collapsed every shelf onto the same
+      // first search hit. Resolve a few and combine them into one request.
+      for (const text of seedText(source).slice(0, 3)) {
+        const found = await search(text);
+        if (found.tracks.length) {
+          const id = spotifyIdOf(found.tracks[0]);
+          if (id && trackIds.indexOf(id) < 0) trackIds.push(id);
+        }
+        if (found.artists.length) {
+          const id = spotifyIdOf(found.artists[0]);
+          if (id && artistIds.indexOf(id) < 0) artistIds.push(id);
+        }
+        if (trackIds.length >= 2 && artistIds.length >= 2) break;
       }
     }
 
@@ -753,14 +781,23 @@
     if (!(await ensureToken())) return localRecommendations(source, size);
 
     const params = new URLSearchParams({ limit: String(size) });
+    if (opts.market) params.set('market', String(opts.market));
+    const tunables = opts.tunables || {};
+    Object.keys(tunables).forEach((key) => {
+      if (tunables[key] != null && tunables[key] !== '') params.set(key, String(tunables[key]));
+    });
+    // Spotify allows at most five seeds. Give tracks and artists their own
+    // budget so a genre or artist seed never gets crowded out.
     let remaining = 5;
     if (remaining && trackIds.length) {
-      params.set('seed_tracks', trackIds.slice(0, remaining).join(','));
-      remaining -= Math.min(remaining, trackIds.length);
+      const count = Math.min(remaining, 3, trackIds.length);
+      params.set('seed_tracks', trackIds.slice(0, count).join(','));
+      remaining -= count;
     }
     if (remaining && artistIds.length) {
-      params.set('seed_artists', artistIds.slice(0, remaining).join(','));
-      remaining -= Math.min(remaining, artistIds.length);
+      const count = Math.min(remaining, 2, artistIds.length);
+      params.set('seed_artists', artistIds.slice(0, count).join(','));
+      remaining -= count;
     }
     if (remaining && genres.length) {
       params.set('seed_genres', genres.slice(0, remaining).join(','));
@@ -769,7 +806,11 @@
     try {
       const data = await api('/recommendations?' + params.toString());
       if (!data) return localRecommendations(source, size);
-      const tracks = ((data.tracks || []).map(toTrackRaw)).filter(Boolean);
+      const seedKeys = new Set(trackIds.concat(artistIds));
+      const tracks = ((data.tracks || []).map(toTrackRaw))
+        .filter(Boolean)
+        .filter((track) => !seedKeys.has(spotifyIdOf(track)))
+        .filter((track, index, all) => all.findIndex((other) => trackDupeKey(other) === trackDupeKey(track)) === index);
       if (!tracks.length) return localRecommendations(source, size);
       return { available: true, source: 'spotify', tracks: tracks };
     } catch (error) {
@@ -777,22 +818,61 @@
     }
   }
 
-  function cacheKey(seeds, limit) {
+  function cacheKey(seeds, limit, options) {
     const source = seeds || {};
+    const opts = options || {};
     return JSON.stringify({
       tracks: (source.tracks || []).map(spotifyIdOf).filter(Boolean).slice(0, 5),
       artists: (source.artists || []).map(spotifyIdOf).filter(Boolean).slice(0, 5),
       genres: (source.genres || []).slice(0, 3),
       queries: seedText(source),
+      nonce: source.nonce || 0,
+      market: opts.market || '',
       limit: limit,
       connected: status().ready || status().connected
     });
   }
 
-  function recommendFor(seeds, limit) {
-    const key = cacheKey(seeds, limit);
-    if (!recCache.has(key)) recCache.set(key, recommendations(seeds, limit));
+  function recommendFor(seeds, limit, options) {
+    const opts = options || {};
+    const key = cacheKey(seeds, limit, opts);
+    if (opts.fresh) recCache.delete(key);
+    if (!recCache.has(key)) {
+      // Feed refreshes change the nonce, so bound old keys instead of keeping
+      // every previous session's picks in memory.
+      if (recCache.size >= 80) {
+        const oldest = recCache.keys().next().value;
+        if (oldest !== key) recCache.delete(oldest);
+      }
+      recCache.set(key, recommendations(seeds, limit, opts));
+    }
     return recCache.get(key);
+  }
+
+  /** Spotify-powered radio for the song that is currently playing. */
+  async function songRadio(trackOrId, limit, options) {
+    const opts = options || {};
+    const ids = seedIdsForTrack(trackOrId);
+    const song = (trackOrId && typeof trackOrId === 'object') ? trackOrId : null;
+    const title = song && song.title ? String(song.title) : '';
+    const artist = song && song.artist ? String(song.artist) : '';
+    const seeds = {
+      tracks: ids.trackId ? [ids.trackId] : [],
+      artists: ids.artistIds,
+      genres: [],
+      queries: (ids.trackId || ids.artistIds.length) ? [] : [title, artist].filter(Boolean),
+      titles: title ? [title] : [],
+      nonce: opts.nonce || 0
+    };
+    const result = await recommendFor(seeds, Math.max(1, Number(limit) || 50), {
+      fresh: opts.fresh !== false,
+      market: opts.market || ''
+    });
+    if (result && Array.isArray(result.tracks) && result.tracks.length &&
+        MV.webApi && MV.webApi.rememberSpotify) {
+      try { MV.webApi.rememberSpotify(result.tracks); } catch (error) { /* best effort */ }
+    }
+    return result || { available: false, source: 'local', tracks: [] };
   }
 
   function clearCache() {
@@ -945,6 +1025,8 @@
     toPlaylistRaw: toPlaylistRaw,
     recommendations: recommendations,
     recommendFor: recommendFor,
+    songRadio: songRadio,
+    seedIdsForTrack: seedIdsForTrack,
     trackById: trackById,
     toTrackRaw: toTrackRaw,
     toAlbumRaw: toAlbumRaw,

@@ -1447,6 +1447,38 @@ input[type="text"]:focus, input[type="search"]:focus { border-color: rgba(var(--
 .modal p { color: var(--ink-soft); font-size: 12px; }
 .modal__actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; }
 
+/* Large Add Songs screen: ten picks with a persistent refresh control. */
+.modal--add-songs {
+  width: min(980px, 100%);
+  height: min(88dvh, 900px);
+  display: flex;
+  flex-direction: column;
+  padding: 26px 28px;
+}
+.modal--add-songs .suggestion-list {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 0;
+  align-content: start;
+  margin: 18px 0 6px;
+  gap: 10px;
+}
+.modal--add-songs .modal__actions {
+  position: sticky;
+  bottom: 0;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 12px 2px 2px;
+  background: var(--glass-solid);
+}
+.suggestion-page {
+  margin-right: auto;
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: var(--ink-faint);
+}
+
 .cover-picker {
   display: flex;
   align-items: center;

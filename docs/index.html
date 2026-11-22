@@ -14,11 +14,11 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=1166">
-  <link rel="stylesheet" href="css/layout.css?v=1166">
+  <link rel="stylesheet" href="css/base.css?v=1168">
+  <link rel="stylesheet" href="css/layout.css?v=1168">
   <link rel="stylesheet" href="css/components.css?v=1114">
-  <link rel="stylesheet" href="css/web.css?v=1133">
-  <link rel="stylesheet" href="css/mobile-redesign.css?v=1167">
+  <link rel="stylesheet" href="css/web.css?v=1168">
+  <link rel="stylesheet" href="css/mobile-redesign.css?v=1168">
   <link rel="stylesheet" href="css/lyrics.css?v=1139">
 </head>
 
@@ -844,6 +844,16 @@
                 <p class="setting-range__value" id="lyrics-speed-value">1.0× · 0.9s morph</p>
               </div>
             </div>
+
+            <div class="account-card">
+              <p class="eyebrow">APPEARANCE</p>
+              <h3>Soft theme change</h3>
+              <p class="field-note">Turn off the flipping tiles. Switching modes will slowly fade the background from white to black and back.</p>
+              <label class="switch-row">
+                <span><strong>Slow background fade</strong><small>Disable the light / dark flip animation</small></span>
+                <input type="checkbox" id="setting-crossfade-theme"><span class="switch"></span>
+              </label>
+            </div>
           </div>
         </section>
 
@@ -886,6 +896,7 @@
           <button class="play-main" id="main-play" aria-label="Play" title="Play / pause">▶</button>
           <button class="control" id="next" aria-label="Next" title="Next">›|</button>
           <button class="control control--add" id="player-add" aria-label="Add current song to playlist" title="Add current song to playlist">+</button>
+          <button class="control control--radio" id="player-radio" aria-label="Open song radio" title="Song radio">◈</button>
         </div>
         <div class="seek-row">
           <span id="current-time">0:00</span>
@@ -975,6 +986,7 @@
           </div>
           <div class="flow-secondary">
             <button id="flow-like">♡ Like</button>
+            <button id="flow-radio">◈ Song radio</button>
             <button id="flow-save">↓ Save album</button>
             <button id="flow-queue">☷ Queue</button>
           </div>
@@ -1025,16 +1037,16 @@
 
   <script src="js/data.js?v=1140"></script>
   <script src="js/artwork.js?v=1157"></script>
-  <script src="js/store.js?v=1153"></script>
+  <script src="js/store.js?v=1168"></script>
   <script src="js/web-seed.js?v=1113"></script>
   <script src="js/web-jio-catalog.js?v=1113"></script>
-  <script src="js/spotify.js?v=1167"></script>
+  <script src="js/spotify.js?v=1168"></script>
   <script src="js/web-api.js?v=1164"></script>
   <script src="js/api.js?v=1162"></script>
   <script src="js/player.js?v=1163"></script>
   <script src="js/lyrics.js?v=1167"></script>
-  <script src="js/ui.js?v=1167"></script>
-  <script src="js/app.js?v=1113"></script>
+  <script src="js/ui.js?v=1168"></script>
+  <script src="js/app.js?v=1168"></script>
 </body>
 
 </html>
