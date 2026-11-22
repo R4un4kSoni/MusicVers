@@ -231,6 +231,16 @@ body.no-ambience .ambient { opacity: 0; }
 
 .btn--outline:hover { background: #fff; box-shadow: var(--shadow-soft); }
 
+/* Icon-only buttons (compact album header). */
+.btn--icon {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  gap: 0;
+  font-size: 14px;
+}
+
 .btn--danger-ghost {
   color: #a54242;
   border: 1px solid rgba(165, 66, 66, .25);
@@ -461,10 +471,16 @@ body.no-ambience .ambient { opacity: 0; }
 }
 
 :root[data-theme="dark"] .search-bar,
-:root[data-theme="dark"] .recent-popover,
-:root[data-theme="dark"] .modal {
+:root[data-theme="dark"] .recent-popover {
   background: var(--glass-solid);
   border-color: var(--glass-border);
+  color: var(--ink);
+}
+
+/* Glass stays translucent in dark mode too. */
+:root[data-theme="dark"] .modal {
+  background: rgba(24, 26, 31, .74);
+  border-color: rgba(255, 255, 255, .16);
   color: var(--ink);
 }
 
@@ -575,7 +591,6 @@ body.no-ambience .ambient { opacity: 0; }
 :root[data-theme="dark"] .account-card,
 :root[data-theme="dark"] .flow-close,
 :root[data-theme="dark"] .flow-secondary button,
-:root[data-theme="dark"] .modal,
 :root[data-theme="dark"] .media-card,
 :root[data-theme="dark"] .recent-tile,
 :root[data-theme="dark"] .song-row,

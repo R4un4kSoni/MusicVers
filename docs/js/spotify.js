@@ -688,13 +688,24 @@
     const live = (MV.discoverData && MV.discoverData.trending) || [];
     const pool = [];
     const seen = new Set();
-    live.concat((MV.data && MV.data.songs) || []).forEach((song) => {
+    const add = (song) => {
       if (!song || !song.title) return;
       const key = String(song.title).toLowerCase() + '|' + String(song.artist || '').toLowerCase();
       if (seen.has(key)) return;
       seen.add(key);
       pool.push(song);
-    });
+    };
+
+    // On the search page, seed local picks with the actual results. Without
+    // this, the shelf falls back to the first bundled songs and looks like it
+    // ignores the search entirely.
+    const query = (source.queries || [])[0];
+    const search = MV.searchState;
+    if (query && search && search.result &&
+        String(search.query || '') === String(query)) {
+      (search.result.songs || []).forEach(add);
+    }
+    live.concat((MV.data && MV.data.songs) || []).forEach(add);
 
     const text = seedText(source).join(' ').toLowerCase();
     const tokens = text.split(/[^\p{L}\p{N}]+/u).filter((token) => token.length > 2);

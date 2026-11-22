@@ -348,6 +348,21 @@
 
   /* ---------------- cards + rows ---------------- */
 
+  function cardArt(item, title, isArtist, type) {
+    // Artist search results often carry only a remote cover URL. Let the
+    // browser load it directly so the round artwork is not stuck on the
+    // cached placeholder while the artwork queue works through other images.
+    if (isArtist) {
+      const cover = item.cover || item.image || (item.raw && item.raw.cover) || '';
+      if (cover) {
+        return '<img class="cover-image media-card__artist-art" src="' + esc(cover) + '"' +
+          ' alt="' + esc(title) + '" data-cover-alt="' + esc(title) + '"' +
+          ' data-cover-round="true" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
+      }
+    }
+    return image(item.cover, title, isArtist, item, type);
+  }
+
   function mediaCard(item, type, opts) {
     const settings = opts || {};
     const key = ref(item);
@@ -366,7 +381,7 @@
     const glyph = settings.glyph || (opensDetails ? '↗' : '▶');
 
     return '<article class="' + classes + '" tabindex="0" role="button" data-action="' + action + '" data-key="' + key + '" data-tilt aria-label="' + (opensDetails ? 'Open ' : 'Play ') + esc(title) + '">' +
-      '<div class="media-card__art">' + image(item.cover, title, isArtist, item, type) +
+      '<div class="media-card__art">' + cardArt(item, title, isArtist, type) +
       '<span class="media-card__shine"></span>' +
       '<button class="media-card__play" aria-label="' + (opensDetails ? 'Open details' : 'Open mix') + '">' + glyph + '</button>' +
       (type === 'album'
@@ -765,9 +780,10 @@
   function spotifySeedsForResults() {
     const result = MV.searchState.result;
     const query = MV.searchState.query || '';
+    // Do not put the raw query in `titles`: local recommendations exclude
+    // seed titles, which would discard every song matching the search.
     return {
       queries: [query].filter(Boolean),
-      titles: [query].filter(Boolean),
       tracks: result && result.songs ? result.songs.slice(0, 2) : [],
       artists: result && result.artists ? result.artists.slice(0, 1) : []
     };
@@ -914,8 +930,12 @@
     const genres = (MV.discoverData && MV.discoverData.genres && MV.discoverData.genres.length)
       ? MV.discoverData.genres.slice(0, 12).map((genre) => typeof genre === 'string' ? genre : (genre.name || genre.title))
       : D.genres;
+    // Spotify-style browse tiles: one card per mood instead of a run-together
+    // row of small capsules.
     el('genre-chips').innerHTML = genres.filter(Boolean).map((name) =>
-      '<button class="chip" data-action="chip-search" data-query="' + esc(name) + '">' + esc(name) + '</button>').join('');
+      '<button class="genre-card" data-action="chip-search" data-query="' + esc(name) + '">' +
+      '<span class="genre-card__label">' + esc(name) + '</span>' +
+      '<span class="genre-card__orb" aria-hidden="true"></span></button>').join('');
   }
 
   function topSongFor(artist, songs) {
@@ -1769,7 +1789,11 @@
 
     if (saveButton) {
       const saved = MV.store.isAlbumSaved(album);
-      saveButton.textContent = saved ? '✓ Saved to library' : '↓ Save album';
+      // Keep this control icon-only: the compact album header has no room for
+      // long button labels.
+      saveButton.innerHTML = '<span>' + (saved ? '✓' : '↓') + '</span>';
+      saveButton.setAttribute('aria-label', saved ? 'Saved to library' : 'Save album');
+      saveButton.setAttribute('title', saved ? 'Saved to library' : 'Save album');
       saveButton.classList.toggle('is-on', saved);
       saveButton.setAttribute('aria-pressed', String(saved));
     }

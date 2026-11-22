@@ -623,6 +623,51 @@
 
 .chip:hover { transform: translateY(-3px); background: #fff; }
 
+/* Browse-by-mood tiles: one Spotify-like card per genre. */
+#genre-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 12px;
+}
+
+.genre-card {
+  position: relative;
+  min-height: 82px;
+  padding: 14px;
+  border: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  text-align: left;
+  color: #fff;
+  box-shadow: var(--shadow-soft);
+  transition: transform .25s var(--ease-out), box-shadow .25s ease;
+}
+
+.genre-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lift); }
+.genre-card__label { position: relative; z-index: 1; font-size: 14px; font-weight: 800; letter-spacing: -.01em; }
+.genre-card__orb {
+  position: absolute;
+  width: 86px;
+  height: 86px;
+  right: -22px;
+  top: -28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .28);
+  transform: rotate(-24deg);
+}
+.genre-card:nth-child(10n+1) { background: linear-gradient(135deg, #4f7c6a, #24443a); }
+.genre-card:nth-child(10n+2) { background: linear-gradient(135deg, #7c5aa8, #3d2a56); }
+.genre-card:nth-child(10n+3) { background: linear-gradient(135deg, #d9824f, #8a4326); }
+.genre-card:nth-child(10n+4) { background: linear-gradient(135deg, #4f78a8, #26405f); }
+.genre-card:nth-child(10n+5) { background: linear-gradient(135deg, #b6577a, #6a2943); }
+.genre-card:nth-child(10n+6) { background: linear-gradient(135deg, #6f7fbb, #343e70); }
+.genre-card:nth-child(10n+7) { background: linear-gradient(135deg, #927a4f, #574626); }
+.genre-card:nth-child(10n+8) { background: linear-gradient(135deg, #a34f5f, #5c2733); }
+.genre-card:nth-child(10n+9) { background: linear-gradient(135deg, #4f92a3, #26515c); }
+.genre-card:nth-child(10n+10) { background: linear-gradient(135deg, #6d6aa8, #383661); }
+
 /* ---------------- library ---------------- */
 
 .library-tiles {
@@ -754,6 +799,32 @@
 .playlist-head__copy > p:not(.eyebrow) { color: var(--ink-faint); font-size: 12px; }
 .playlist-head__actions { display: flex; gap: 9px; margin-top: 18px; flex-wrap: wrap; }
 .album-note { margin: 13px 0 0; font-size: 10px; letter-spacing: .03em; color: var(--ink-faint); }
+
+/* Album overview stays compact: small type, one or two lines of metadata,
+   and icon-only playback/save controls. Playlist headers keep the big style. */
+#page-album .playlist-head { align-items: center; gap: 18px; padding: 14px 0 18px; }
+#page-album .playlist-head__cover { width: 116px; border-radius: 18px; font-size: 40px; }
+#page-album .playlist-head__copy { min-width: 0; }
+#page-album .playlist-head__copy .eyebrow { margin: 0; font-size: 9px; }
+#page-album .playlist-head__copy h1 {
+  font-size: clamp(20px, 2.6vw, 28px);
+  margin: 2px 0 4px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#page-album .playlist-head__copy > p:not(.eyebrow):not(.album-note) {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+#page-album .album-note { display: none; }
+#page-album .playlist-head__actions { margin-top: 10px; gap: 8px; }
 
 .playlist-add {
   margin-top: 34px;
@@ -1359,9 +1430,11 @@ input[type="text"]:focus, input[type="search"]:focus { border-color: rgba(var(--
   width: min(440px, 100%);
   padding: 28px;
   border-radius: var(--radius-lg);
-  background: #fbfaf7;
-  border: 1px solid #fff;
-  box-shadow: 0 40px 100px rgba(0, 0, 0, .3);
+  background: rgba(255, 255, 255, .72);
+  border: 1px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255, 255, 255, .7);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
   animation: modal-in .4s var(--ease-out) both;
 }
 

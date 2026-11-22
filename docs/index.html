@@ -14,11 +14,11 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=1140">
-  <link rel="stylesheet" href="css/layout.css?v=1130">
+  <link rel="stylesheet" href="css/base.css?v=1166">
+  <link rel="stylesheet" href="css/layout.css?v=1166">
   <link rel="stylesheet" href="css/components.css?v=1114">
   <link rel="stylesheet" href="css/web.css?v=1133">
-  <link rel="stylesheet" href="css/mobile-redesign.css?v=1137">
+  <link rel="stylesheet" href="css/mobile-redesign.css?v=1166">
   <link rel="stylesheet" href="css/lyrics.css?v=1139">
 </head>
 
@@ -178,11 +178,11 @@
               <span id="home-greeting">Good evening</span>
               <strong id="home-profile-name">Music Lover</strong>
             </div>
-            <button class="home-action" id="home-search" aria-label="Search music">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4" /><path d="m15.6 15.6 4.6 4.6" /></svg>
-            </button>
             <button class="home-action home-action--liked" data-library-tab="liked" aria-label="Open liked songs">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.7 13a4.6 4.6 0 0 1 6.5-6.5l.8.8.8-.8A4.6 4.6 0 0 1 19.3 13z" /></svg>
+            </button>
+            <button class="home-action home-action--search" id="home-search" aria-label="Search music">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4" /><path d="m15.6 15.6 4.6 4.6" /></svg>
             </button>
           </header>
 
@@ -540,8 +540,8 @@
               <h1 id="album-head-title">Album</h1>
               <p id="album-head-meta">0 songs</p>
               <div class="playlist-head__actions">
-                <button class="btn btn--dark" id="album-play"><span>▶</span> Play album</button>
-                <button class="btn btn--outline" id="album-save">↓ Save album</button>
+                <button class="btn btn--icon btn--dark" id="album-play" aria-label="Play album" title="Play album"><span>▶</span></button>
+                <button class="btn btn--icon btn--outline" id="album-save" aria-label="Save album" title="Save album"><span>↓</span></button>
               </div>
               <p class="album-note" id="album-note">Read-only collection · the title and cover come from the catalogue.</p>
             </div>
@@ -1027,12 +1027,12 @@
   <script src="js/store.js?v=1153"></script>
   <script src="js/web-seed.js?v=1113"></script>
   <script src="js/web-jio-catalog.js?v=1113"></script>
-  <script src="js/spotify.js?v=1159"></script>
+  <script src="js/spotify.js?v=1166"></script>
   <script src="js/web-api.js?v=1164"></script>
   <script src="js/api.js?v=1162"></script>
   <script src="js/player.js?v=1163"></script>
   <script src="js/lyrics.js?v=1142"></script>
-  <script src="js/ui.js?v=1162"></script>
+  <script src="js/ui.js?v=1166"></script>
   <script src="js/app.js?v=1113"></script>
 </body>
 
