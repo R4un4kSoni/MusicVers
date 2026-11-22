@@ -14,10 +14,12 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=1113">
-  <link rel="stylesheet" href="css/layout.css?v=1113">
-  <link rel="stylesheet" href="css/components.css?v=1113">
-  <link rel="stylesheet" href="css/web.css?v=1113">
+  <link rel="stylesheet" href="css/base.css?v=1140">
+  <link rel="stylesheet" href="css/layout.css?v=1130">
+  <link rel="stylesheet" href="css/components.css?v=1114">
+  <link rel="stylesheet" href="css/web.css?v=1133">
+  <link rel="stylesheet" href="css/mobile-redesign.css?v=1137">
+  <link rel="stylesheet" href="css/lyrics.css?v=1139">
 </head>
 
 <body>
@@ -101,20 +103,21 @@
         </span>
         <span class="island-tab__label">Home</span>
       </button>
-      <button class="island-tab mobile-tab" data-nav="library" aria-label="Library">
-        <span class="island-tab__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M4 4h6v16H4zM11 4h4v16h-4zM17 6l3-.8 2.4 12.6-3 .7z" /></svg>
-        </span>
-        <span class="island-tab__label">Library</span>
-      </button>
       <button class="island-tab mobile-tab" data-nav="discover" aria-label="Discover">
         <span class="island-tab__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg>
         </span>
         <span class="island-tab__label">Discover</span>
       </button>
-      <button class="island-tab mobile-tab mobile-tab--account" data-nav="account" aria-label="Account">
+      <button class="island-tab mobile-tab" data-nav="library" aria-label="Library">
+        <span class="island-tab__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 4h6v16H4zM11 4h4v16h-4zM17 6l3-.8 2.4 12.6-3 .7z" /></svg>
+        </span>
+        <span class="island-tab__label">Library</span>
+      </button>
+      <button class="island-tab mobile-tab mobile-tab--account" data-nav="account" aria-label="Settings">
         <span class="mobile-tab__avatar" id="mobile-tab-avatar" aria-hidden="true">M</span>
+        <span class="island-tab__label">Settings</span>
       </button>
     </nav>
 
@@ -126,15 +129,14 @@
           <span class="crumb" id="crumb">HOME</span>
         </div>
         <div class="stage-top__right">
+          <button class="round-icon top-search" id="top-search" aria-label="Search" title="Search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
+          </button>
           <div class="top-menu" id="top-menu">
             <button class="round-icon top-menu__toggle" id="top-menu-toggle" aria-label="More options" aria-haspopup="menu" aria-expanded="false" title="More options">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="12" cy="19" r="1.4" /></svg>
             </button>
             <div class="top-menu__list" id="top-menu-list" role="menu" aria-hidden="true">
-              <button class="top-menu__item" id="top-search" role="menuitem" aria-label="Search" title="Search">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
-                <span>Search</span>
-              </button>
               <button class="top-menu__item" id="top-flow" role="menuitem" aria-label="Open Flow State" title="Flow State">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 15v5h-5M20 9V4h-5M4 15v5h5" /></svg>
                 <span>Flow State</span>
@@ -170,6 +172,27 @@
             <p class="page-intro__sub">The world's newest records, your late-night favourites, and everything in between.</p>
           </div>
 
+          <header class="home-mobile-header" aria-label="Home shortcuts">
+            <button class="home-avatar" id="home-avatar" data-nav="account" aria-label="Open settings">M</button>
+            <div class="home-greeting">
+              <span id="home-greeting">Good evening</span>
+              <strong id="home-profile-name">Music Lover</strong>
+            </div>
+            <button class="home-action" id="home-search" aria-label="Search music">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4" /><path d="m15.6 15.6 4.6 4.6" /></svg>
+            </button>
+            <button class="home-action home-action--liked" data-library-tab="liked" aria-label="Open liked songs">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.7 13a4.6 4.6 0 0 1 6.5-6.5l.8.8.8-.8A4.6 4.6 0 0 1 19.3 13z" /></svg>
+            </button>
+          </header>
+
+          <div class="home-filters" role="tablist" aria-label="Browse home categories">
+            <button class="home-filter is-active" data-action="home-filter" data-home-filter="all" role="tab" aria-selected="true">All</button>
+            <button class="home-filter" data-action="home-filter" data-home-filter="new" role="tab" aria-selected="false">New Releases</button>
+            <button class="home-filter" data-action="home-filter" data-home-filter="trending" role="tab" aria-selected="false">Trending</button>
+            <button class="home-filter" data-action="home-filter" data-home-filter="charts" role="tab" aria-selected="false">Top Charts</button>
+          </div>
+
           <!-- Cinematic slider -->
           <section class="hero" id="hero" aria-label="Featured music">
             <div class="hero-track" id="hero-track"></div>
@@ -189,6 +212,27 @@
               <button class="hero-arrow" id="hero-next" aria-label="Next slide">›</button>
             </div>
             <div class="hero-index" id="hero-index">01 / 04</div>
+          </section>
+
+          <section class="feature-section" aria-label="Featured albums">
+            <div class="feature-head">
+              <div>
+                <p class="eyebrow">HANDPICKED FOR YOU</p>
+                <h2>Featured albums</h2>
+              </div>
+            </div>
+            <div class="feature-grid" id="feature-cards"></div>
+          </section>
+
+          <section class="shelf recommend-shelf" id="shelf-spotify-home">
+            <div class="shelf-head">
+              <div>
+                <p class="eyebrow" id="spotify-home-eyebrow">SPOTIFY RECOMMENDS</p>
+                <h2 id="spotify-home-title">Made for your next play</h2>
+              </div>
+              <span class="recommend-source" id="spotify-home-source">Connect Spotify for live picks</span>
+            </div>
+            <div class="rail rail--songs" id="spotify-home-recs"></div>
           </section>
 
           <section class="shelf" id="shelf-recent">
@@ -273,9 +317,10 @@
             <p class="eyebrow">DISCOVER · SEARCH THE WORLD OF MUSIC</p>
             <form class="search-bar" id="search-form" autocomplete="off">
               <svg class="search-bar__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
-              <input type="text" id="search-input" placeholder=" songs, artists, albums…" aria-label="Search songs, artists or albums">
+              <input type="text" id="search-input" placeholder="Search music, artists, albums..." aria-label="Search songs, artists or albums">
               <button type="button" class="search-bar__clear" id="search-clear" aria-label="Clear search" hidden>×</button>
               <button type="submit" class="search-bar__button">Search</button>
+              <button type="button" class="search-close" id="search-close" aria-label="Close search">×</button>
               <div class="recent-popover" id="recent-searches" hidden></div>
             </form>
             <p class="search-hint">start search with Music Ablums and Artist Name</p>
@@ -286,31 +331,90 @@
               <button data-query="Blinding Lights">Blinding Lights</button>
               <button data-query="The Weeknd">The Weeknd</button>
             </div>
+
+            <div class="search-mobile-sections">
+              <section class="search-section">
+                <div class="search-section__head">
+                  <p class="eyebrow">SEARCH PROMPTS</p>
+                  <h2>Start here</h2>
+                </div>
+                <div class="start-here" id="start-here"></div>
+              </section>
+              <section class="search-section">
+                <div class="search-section__head">
+                  <p class="eyebrow">PICKED FOR YOU</p>
+                  <h2>Top Picks</h2>
+                </div>
+                <div class="discover-cards" id="discover-picks"></div>
+              </section>
+              <section class="search-section">
+                <div class="search-section__head">
+                  <p class="eyebrow">JUMP BACK IN</p>
+                  <h2>Recently Explored</h2>
+                </div>
+                <div class="recent-explored" id="recently-explored"></div>
+              </section>
+            </div>
           </div>
 
-          <section class="results" id="results" hidden>
+          <section class="shelf recommend-shelf" id="shelf-spotify-discover">
             <div class="shelf-head">
+              <div>
+                <p class="eyebrow" id="spotify-discover-eyebrow">SPOTIFY RECOMMENDS</p>
+                <h2 id="spotify-discover-title">Start with a sound you like</h2>
+              </div>
+              <span class="recommend-source" id="spotify-discover-source">Connect Spotify for live picks</span>
+            </div>
+            <div class="rail rail--songs" id="spotify-discover-recs"></div>
+          </section>
+
+          <section class="results" id="results" hidden>
+            <div class="shelf-head results-head">
               <div>
                 <p class="eyebrow" id="results-eyebrow">SEARCH RESULTS</p>
                 <h2 id="results-heading">Top matches</h2>
               </div>
               <span class="results-status" id="search-status"></span>
             </div>
-            <div class="results-block">
-              <h3 class="results-label"><span>01</span> Top matched songs</h3>
-              <div class="results-songs-split">
-                <div class="song-list song-list--detail" id="result-songs-a"></div>
-                <div class="song-list song-list--detail" id="result-songs-b"></div>
+            <div class="result-filters" role="tablist" aria-label="Filter search results">
+              <button class="result-filter is-active" data-action="result-filter" data-result-filter="all" role="tab" aria-selected="true">All</button>
+              <button class="result-filter" data-action="result-filter" data-result-filter="songs" role="tab" aria-selected="false">Songs</button>
+              <button class="result-filter" data-action="result-filter" data-result-filter="artists" role="tab" aria-selected="false">Artists</button>
+              <button class="result-filter" data-action="result-filter" data-result-filter="albums" role="tab" aria-selected="false">Albums</button>
+              <button class="result-filter" data-action="result-filter" data-result-filter="podcasts" role="tab" aria-selected="false">Podcasts</button>
+            </div>
+            <div class="results-grid">
+              <section class="results-block results-block--top" id="result-block-top">
+                <h3 class="results-label"><span>01</span> Top result</h3>
+                <div class="top-result" id="result-top"></div>
+              </section>
+              <section class="results-block results-block--songs" id="result-block-songs">
+                <h3 class="results-label"><span>02</span> Songs</h3>
+                <div class="song-list song-list--spotify" id="result-songs-a"></div>
+                <button class="btn btn--outline load-more" id="load-more-songs" hidden>Load more songs ↓</button>
+              </section>
+              <section class="results-block results-block--artists" id="result-block-artists">
+                <h3 class="results-label"><span>03</span> Artists</h3>
+                <div class="media-grid" id="result-artists"></div>
+              </section>
+              <section class="results-block results-block--albums" id="result-block-albums">
+                <h3 class="results-label"><span>04</span> Albums</h3>
+                <div class="media-grid" id="result-albums"></div>
+              </section>
+              <section class="results-block results-block--podcasts" id="result-block-podcasts" hidden>
+                <h3 class="results-label"><span>05</span> Podcasts</h3>
+                <div class="result-podcasts" id="result-podcasts"></div>
+              </section>
+            </div>
+            <div class="results-block recommend-block" id="result-recs">
+              <div class="shelf-head">
+                <div>
+                  <p class="eyebrow" id="spotify-results-eyebrow">SPOTIFY RECOMMENDS</p>
+                  <h3 class="results-label" id="spotify-results-title">Because you searched this</h3>
+                </div>
+                <span class="recommend-source" id="spotify-results-source"></span>
               </div>
-              <button class="btn btn--outline load-more" id="load-more-songs" hidden>Load more songs ↓</button>
-            </div>
-            <div class="results-block">
-              <h3 class="results-label"><span>02</span> Artists</h3>
-              <div class="artist-list" id="result-artists"></div>
-            </div>
-            <div class="results-block">
-              <h3 class="results-label"><span>03</span> Albums</h3>
-              <div class="mini-grid" id="result-albums"></div>
+              <div class="rail rail--songs" id="spotify-result-recs"></div>
             </div>
           </section>
 
@@ -331,6 +435,21 @@
             <p class="eyebrow">YOUR MUSIC, YOUR RULES</p>
             <h1>The <em>Library.</em></h1>
             <p class="page-intro__sub">Everything you've loved, saved and built — in one quiet corner.</p>
+          </div>
+
+          <header class="library-mobile-head">
+            <h2>My Music</h2>
+            <button class="library-options" id="library-options" data-nav="account" aria-label="Library options">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" /></svg>
+            </button>
+          </header>
+
+          <div class="library-filters" role="tablist" aria-label="Filter library">
+            <button class="library-filter is-active" data-library-tab="all" role="tab" aria-selected="true">All</button>
+            <button class="library-filter" data-library-tab="playlists" role="tab" aria-selected="false">Playlists</button>
+            <button class="library-filter" data-library-tab="liked" role="tab" aria-selected="false">Liked Songs</button>
+            <button class="library-filter" data-library-tab="downloads" role="tab" aria-selected="false">Downloads</button>
+            <button class="library-filter" data-library-tab="albums" role="tab" aria-selected="false">Albums</button>
           </div>
 
           <div class="library-tiles">
@@ -360,6 +479,16 @@
             </div>
             <button class="add-round" id="add-playlist" aria-label="Create playlist" title="Create a playlist">＋</button>
             <div class="library-panel" id="library-panel"></div>
+            <section class="shelf recommend-shelf" id="shelf-spotify-library">
+              <div class="shelf-head">
+                <div>
+                  <p class="eyebrow" id="spotify-library-eyebrow">SPOTIFY RECOMMENDS</p>
+                  <h2 id="spotify-library-title">More like your library</h2>
+                </div>
+                <span class="recommend-source" id="spotify-library-source">Connect Spotify for live picks</span>
+              </div>
+              <div class="rail rail--songs" id="spotify-library-recs"></div>
+            </section>
           </div>
 
           <footer class="page-foot">Tip · use the ↓ button on any album to save it here</footer>
@@ -374,15 +503,26 @@
               <p class="eyebrow">YOUR PLAYLIST</p>
               <h1 id="playlist-head-title">Playlist</h1>
               <p id="playlist-head-meta">0 songs</p>
-              <div class="playlist-head__actions">
-                <button class="btn btn--dark" id="playlist-play"><span>▶</span> Play all</button>
-                <button class="btn btn--outline" id="playlist-cover">Change cover</button>
-                <button class="btn btn--outline" id="playlist-rename">Rename</button>
-                <button class="btn btn--danger-ghost" id="playlist-delete">Delete</button>
+              <div class="playlist-head__actions playlist-actions">
+                <button class="playlist-play-big" id="playlist-play" aria-label="Play playlist" title="Play playlist">▶</button>
+                <button class="playlist-action playlist-action--add" id="playlist-add-songs" aria-label="Add songs" title="Add songs">+</button>
+                <button class="playlist-action playlist-action--more" id="playlist-more" aria-label="More playlist options" title="More options">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="19" r="1.6" /></svg>
+                </button>
               </div>
             </div>
           </div>
           <div class="song-list song-list--detail" id="playlist-songs"></div>
+          <section class="shelf recommend-shelf" id="shelf-spotify-playlist">
+            <div class="shelf-head">
+              <div>
+                <p class="eyebrow" id="spotify-playlist-eyebrow">SPOTIFY RECOMMENDS</p>
+                <h2 id="spotify-playlist-title">More like this playlist</h2>
+              </div>
+              <span class="recommend-source" id="spotify-playlist-source">Connect Spotify for live picks</span>
+            </div>
+            <div class="rail rail--songs" id="spotify-playlist-recs"></div>
+          </section>
           <div class="playlist-add">
             <h3>Add a song</h3>
             <p>Search above in Discover, then use “…” → Add to playlist.</p>
@@ -407,6 +547,16 @@
             </div>
           </div>
           <div class="song-list song-list--detail" id="album-songs"></div>
+          <section class="shelf recommend-shelf" id="shelf-spotify-album">
+            <div class="shelf-head">
+              <div>
+                <p class="eyebrow" id="spotify-album-eyebrow">SPOTIFY RECOMMENDS</p>
+                <h2 id="spotify-album-title">Fans of this album also play</h2>
+              </div>
+              <span class="recommend-source" id="spotify-album-source"></span>
+            </div>
+            <div class="rail rail--songs" id="spotify-album-recs"></div>
+          </section>
         </section>
 
         <!-- ---------------- ARTIST DETAIL ---------------- -->
@@ -444,6 +594,16 @@
             <h3 class="results-label"><span>04</span> Featured playlists</h3>
             <div class="grid-rail" id="artist-playlists"></div>
           </div>
+          <section class="shelf recommend-shelf" id="shelf-spotify-artist">
+            <div class="shelf-head">
+              <div>
+                <p class="eyebrow" id="spotify-artist-eyebrow">SPOTIFY RECOMMENDS</p>
+                <h2 id="spotify-artist-title">More in this sound</h2>
+              </div>
+              <span class="recommend-source" id="spotify-artist-source"></span>
+            </div>
+            <div class="rail rail--songs" id="spotify-artist-recs"></div>
+          </section>
         </section>
 
         <!-- ---------------- REPORT ---------------- -->
@@ -589,6 +749,32 @@
               <button class="btn btn--dark" data-nav="stats">Open Listening Stats ↗</button>
             </div>
 
+            <div class="account-card account-card--advanced">
+              <p class="eyebrow">FINE TUNING</p>
+              <h3>Advance settings</h3>
+              <p class="field-note">Fine-tune the little details, starting with how your lyrics move.</p>
+              <button class="btn btn--dark" data-nav="advanced">Open Advance settings ↗</button>
+            </div>
+
+            <div class="account-card account-card--spotify">
+              <p class="eyebrow">SPOTIFY CATALOGUE</p>
+              <h3>Better search, smarter picks</h3>
+              <p class="field-note">Optional. Connect Spotify for richer album/artist metadata and recommendations. Search results come from Spotify and iTunes; JioSaavn is used only to find a full-length stream when you press play.</p>
+              <label class="field-label" for="spotify-client-id">Your Spotify Client ID</label>
+              <div class="field-row">
+                <input type="text" id="spotify-client-id" maxlength="80" placeholder="Paste Client ID" autocomplete="off">
+                <button class="btn btn--dark" id="spotify-save-client">Save</button>
+              </div>
+              <p class="field-note">Create a free Spotify app, add <code id="spotify-redirect-uri"></code> as a redirect URI exactly as shown, including the trailing slash. Spotify rejects <code>localhost</code>; local previews must use the shown <code>127.0.0.1</code> address, while the deployed site uses its HTTPS address. Then paste the Client ID here. No client secret is stored.</p>
+              <div class="spotify-actions">
+                <button class="btn btn--outline" id="spotify-connect">Connect Spotify</button>
+                <button class="btn btn--dark" id="spotify-import-playlist">Import a playlist</button>
+                <button class="btn btn--danger-ghost" id="spotify-disconnect" hidden>Disconnect</button>
+              </div>
+              <p class="field-note" id="spotify-status">Not connected</p>
+              <p class="field-note">Import copies playlist names, covers and track metadata to this device. Playback still resolves to full-length JioSaavn audio; Spotify previews are never used.</p>
+            </div>
+
             <div class="account-card">
               <p class="eyebrow">LOOK &amp; FEEL</p>
               <h3>Make it yours</h3>
@@ -633,6 +819,33 @@
           </div>
         </section>
 
+        <!-- ---------------- ADVANCE SETTINGS ---------------- -->
+        <section class="page" id="page-advanced" data-page="advanced">
+          <button class="back-btn" data-nav="account">← Back to Account</button>
+          <div class="page-intro page-intro--tight">
+            <p class="eyebrow">FINE TUNING</p>
+            <h1>Advance <em>settings.</em></h1>
+            <p class="page-intro__sub">Small controls for the way your music feels.</p>
+          </div>
+
+          <div class="account-grid">
+            <div class="account-card">
+              <p class="eyebrow">LYRICS</p>
+              <h3>Lyrics switch speed</h3>
+              <p class="field-note">Choose how quickly the focus moves onto the next line near the end of the current one. Move right for a faster switch.</p>
+              <div class="setting-range">
+                <label class="field-label" for="setting-lyrics-speed">Switch speed</label>
+                <div class="setting-range__row">
+                  <span>Slow</span>
+                  <input type="range" id="setting-lyrics-speed" min="0.6" max="2.4" step="0.1" value="1" aria-describedby="lyrics-speed-value">
+                  <span>Fast</span>
+                </div>
+                <p class="setting-range__value" id="lyrics-speed-value">1.0× · 0.9s morph</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- ---------------- LISTENING STATS / WRAPPED ---------------- -->
         <section class="page stats-page" id="page-stats" data-page="stats">
           <button class="back-btn" data-nav="account">← Back to Account</button>
@@ -671,7 +884,7 @@
           <button class="control" id="previous" aria-label="Previous" title="Previous">|‹</button>
           <button class="play-main" id="main-play" aria-label="Play" title="Play / pause">▶</button>
           <button class="control" id="next" aria-label="Next" title="Next">›|</button>
-          <button class="control" id="repeat" aria-label="Repeat" title="Repeat: off">↻</button>
+          <button class="control control--add" id="player-add" aria-label="Add current song to playlist" title="Add current song to playlist">+</button>
         </div>
         <div class="seek-row">
           <span id="current-time">0:00</span>
@@ -687,11 +900,23 @@
         <button class="control" id="queue-toggle" aria-label="Queue" title="Queue">☷</button>
         <button class="control" id="volume-icon" aria-label="Mute" title="Mute">◖</button>
         <input type="range" id="volume" min="0" max="100" value="70" aria-label="Volume">
-        <button class="control control--flow" id="flow-launch" aria-label="Flow State" title="Flow State">⤢</button>
+        <button class="control control--lyrics" id="lyrics-launch" aria-label="Lyrics" title="Lyrics" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="7.5" y="2.5" width="6" height="10.5" rx="3"></rect>
+            <path d="M4.5 10a6 6 0 0 0 12 0"></path>
+            <path d="M10.5 16v4.5"></path>
+            <rect class="mic-wave mic-wave--1" x="15.4" y="11.5" width="1.6" height="5.5" rx=".8" stroke="none"></rect>
+            <rect class="mic-wave mic-wave--2" x="18.2" y="9.5" width="1.6" height="7.5" rx=".8" stroke="none"></rect>
+            <rect class="mic-wave mic-wave--3" x="21" y="12.5" width="1.6" height="4.5" rx=".8" stroke="none"></rect>
+          </svg>
+        </button>
       </div>
 
       <div class="player-wave" aria-hidden="true">
         <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="player-progress" id="player-progress" role="slider" aria-label="Playback progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+        <span class="player-progress__fill" id="player-progress-fill"></span>
       </div>
     </footer>
 
@@ -717,6 +942,12 @@
       <div class="flow-bg" id="flow-bg"></div>
       <div class="flow-grain" aria-hidden="true"></div>
       <button class="flow-close" id="flow-close" aria-label="Close Flow State">×</button>
+      <div class="flow-topbar">
+        <button class="flow-back" id="flow-back" aria-label="Back from Flow State">←</button>
+        <strong>Now Playing</strong>
+        <span class="flow-topbar__spacer" aria-hidden="true"></span>
+      </div>
+      <button class="flow-like-top" id="flow-like-top" aria-label="Like current song" aria-pressed="false">♡</button>
       <div class="flow-inner">
         <div class="flow-visual">
           <div class="flow-halo"></div>
@@ -746,9 +977,43 @@
             <button id="flow-save">↓ Save album</button>
             <button id="flow-queue">☷ Queue</button>
           </div>
+          <p class="flow-lyrics-label">LYRICS</p>
           <p class="flow-note" id="flow-note">Let the room disappear for a while.</p>
+          <button class="flow-lyrics-open" id="flow-lyrics-open">See synced lyrics →</button>
         </div>
       </div>
+    </div>
+
+    <!-- ============ interactive lyrics ============ -->
+    <div class="lyrics-view" id="lyrics-view" aria-hidden="true" role="dialog" aria-label="Lyrics">
+      <div class="lyrics-bg" id="lyrics-cover" aria-hidden="true"></div>
+      <div class="lyrics-veil" aria-hidden="true"></div>
+      <header class="lyrics-head">
+        <div>
+          <p class="lyrics-kicker">LYRICS · SING ALONG</p>
+          <h2 class="lyrics-title" id="lyrics-title">Nothing playing</h2>
+          <p class="lyrics-artist" id="lyrics-artist">Choose a song to begin</p>
+        </div>
+        <button class="lyrics-close" id="lyrics-close" aria-label="Close lyrics" title="Close lyrics">×</button>
+      </header>
+      <div class="lyrics-stage">
+        <div class="lyrics-scroll" id="lyrics-lines" tabindex="0" aria-label="Lyrics, tap a line to jump there"></div>
+      </div>
+      <footer class="lyrics-foot">
+        <p class="lyrics-source" id="lyrics-source"></p>
+        <div class="lyrics-progress">
+          <span id="lyrics-elapsed">0:00</span>
+          <div class="lyrics-progress__bar" id="lyrics-progress" role="slider" aria-label="Seek" tabindex="0">
+            <span id="lyrics-progress-fill"></span><i id="lyrics-progress-knob"></i>
+          </div>
+          <span id="lyrics-total">0:00</span>
+        </div>
+        <div class="lyrics-controls">
+          <button id="lyrics-prev" aria-label="Previous song" title="Previous">|‹</button>
+          <button class="lyrics-play" id="lyrics-play" aria-label="Play or pause" title="Play or pause">▶</button>
+          <button id="lyrics-next" aria-label="Next song" title="Next">›|</button>
+        </div>
+      </footer>
     </div>
 
     <input type="file" id="cover-file" accept="image/*" hidden>
@@ -757,14 +1022,17 @@
     <div class="toast-root" id="toast-root" aria-live="polite"></div>
   </div>
 
-  <script src="js/data.js?v=1113"></script>
-  <script src="js/store.js?v=1113"></script>
+  <script src="js/data.js?v=1140"></script>
+  <script src="js/artwork.js?v=1157"></script>
+  <script src="js/store.js?v=1153"></script>
   <script src="js/web-seed.js?v=1113"></script>
   <script src="js/web-jio-catalog.js?v=1113"></script>
-  <script src="js/web-api.js?v=1113"></script>
-  <script src="js/api.js?v=1113"></script>
+  <script src="js/spotify.js?v=1159"></script>
+  <script src="js/web-api.js?v=1157"></script>
+  <script src="js/api.js?v=1151"></script>
   <script src="js/player.js?v=1113"></script>
-  <script src="js/ui.js?v=1113"></script>
+  <script src="js/lyrics.js?v=1142"></script>
+  <script src="js/ui.js?v=1161"></script>
   <script src="js/app.js?v=1113"></script>
 </body>
 

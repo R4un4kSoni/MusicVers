@@ -17,9 +17,11 @@
   const JIO_LIVE_APIS = ['https://saavnx.vercel.app/api', DEFAULT_API];
   const ITUNES_API = 'https://itunes.apple.com';
   const API_BASE_KEY = 'musicver.web.apiBase';
-  const CACHE_KEY = 'musicver.web.cache.v1';
-  const DISCOVERY_KEY = 'musicver.web.discovery.v1';
+  const CACHE_KEY = 'musicver.web.cache.v2';
+  const DISCOVERY_KEY = 'musicver.web.discovery.v2';
   const LIBRARY_KEY = 'musicver.web.localLibrary.v1';
+  const SPOTIFY_META_KEY = 'musicver.web.spotifyMeta.v1';
+  const MAX_STORED_SPOTIFY_META = 600;
   const FOLDER_KEY = 'musicver.web.folderName';
 
   const apiBase = read(API_BASE_KEY) || DEFAULT_API;
@@ -28,6 +30,9 @@
   const jioFullCache = new Map();
   const jioLiveSearchCache = new Map();
   const jioLivePending = new Map();
+  const spotifyMeta = new Map();
+  const spotifyAlbumMeta = new Map();
+  const spotifyArtistMeta = new Map();
   const localTracks = new Map();
   const jioCatalog = MV.webJioCatalog || { songs: {}, albums: {}, entries: {} };
   let folderName = read(FOLDER_KEY) || '';
@@ -105,11 +110,23 @@
   function toTrackRaw(song) {
     if (!song) return null;
     const id = String(song.id || song.songId || hash(song.name || song.title));
-    const cover = bestImage(song.image) || song.cover || song.thumbnail || '';
+    const cover = MV.data.normalizeCover(
+      bestImage(song.image) || song.cover || song.thumbnail,
+      song.title || song.name,
+      song.title || song.name
+    );
     const downloads = Array.isArray(song.downloadUrl)
       ? song.downloadUrl.map((item) => item && item.url).filter(Boolean)
       : [];
     if (downloads.length) streamCache.set(id, downloads);
+    if (MV.artwork) MV.artwork.associate({
+      id: id,
+      title: song.title || song.name,
+      artist: artistName(song),
+      album: albumName(song.album || song.album_name),
+      provider: 'jiosaavn',
+      raw: song
+    }, cover);
 
     return {
       id: id,
@@ -129,10 +146,22 @@
 
   function toAlbumRaw(album) {
     if (!album) return null;
-    const cover = bestImage(album.image) || album.cover || '';
+    const cover = MV.data.normalizeCover(
+      bestImage(album.image) || album.cover,
+      album.title || album.name || 'album',
+      album.title || album.name || 'Album'
+    );
     const artists = album.artists && Array.isArray(album.artists.primary)
       ? album.artists.primary.map((item) => item.name).join(', ')
       : album.artist;
+    if (MV.artwork) MV.artwork.associate({
+      id: String(album.id || hash(album.name || album.title)),
+      title: album.title || album.name,
+      artist: artists,
+      kind: 'album',
+      provider: 'jiosaavn',
+      raw: album
+    }, cover);
     return {
       id: String(album.id || hash(album.name || album.title)),
       title: decode(album.title || album.name || 'Unknown album'),
@@ -149,7 +178,20 @@
 
   function toArtistRaw(artist) {
     if (!artist) return null;
-    const cover = bestImage(artist.image) || artist.cover || '';
+    const cover = MV.data.normalizeCover(
+      bestImage(artist.image) || artist.cover,
+      artist.name || artist.title || 'artist',
+      artist.name || artist.title || 'Artist',
+      true
+    );
+    if (MV.artwork) MV.artwork.associate({
+      id: String(artist.id || hash(artist.name || artist.title)),
+      name: artist.name || artist.title,
+      title: artist.name || artist.title,
+      kind: 'artist',
+      provider: 'jiosaavn',
+      raw: artist
+    }, cover);
     return {
       id: String(artist.id || hash(artist.name || artist.title)),
       name: decode(artist.name || artist.title || 'Unknown artist'),
@@ -162,20 +204,23 @@
     };
   }
 
-  /* iTunes fills the metadata gaps in JioSaavn's regional catalogue. Its own
-     audio is only a 30-second preview, so mainstream playback is remapped to
-     the matching JioSaavn original from the generated ID catalogue below. */
+  /* iTunes supplies metadata only. Its audio is a 30-second preview, so it is
+     never stored as a playable stream; playback must resolve to a full-length
+     JioSaavn original at play time. */
 
   function itunesArtwork(url, size) {
     if (!url) return '';
-    return String(url).replace(/\d+x\d+bb\.(jpg|png|jpeg)$/i, (size || 600) + 'x' + (size || 600) + 'bb.$1');
+    const resized = String(url).replace(
+      /\d+x\d+bb\.(jpg|png|jpeg)$/i,
+      (size || 600) + 'x' + (size || 600) + 'bb.$1'
+    );
+    return MV.data.normalizeCover(resized, '', '', false);
   }
 
   function toItunesTrackRaw(item) {
     if (!item || !item.previewUrl) return null;
     const id = 'itunes-' + String(item.trackId || hash((item.trackName || '') + (item.artistName || '')));
     const cover = itunesArtwork(item.artworkUrl100 || item.artworkUrl60);
-    streamCache.set(id, [item.previewUrl]);
     itunesMeta.set(id, {
       id: id,
       title: decode(item.trackName || item.title || 'Unknown title'),
@@ -195,7 +240,7 @@
       path: 'stream:itunes:' + id,
       cover: cover,
       image: cover,
-      downloadUrl: [{ quality: 'preview', url: item.previewUrl }],
+      downloadUrl: [],
       raw: item
     };
   }
@@ -248,6 +293,145 @@
       '&entity=musicArtist&country=US&limit=' + (Number(limit) || 10));
     return (data && Array.isArray(data.results) ? data.results : [])
       .map(toItunesArtistRaw).filter(Boolean);
+  }
+
+  async function itunesSearchAlbums(query, limit) {
+    const data = await itunesFetch('/search?term=' + encodeURIComponent(query) +
+      '&entity=album&country=US&limit=' + (Number(limit) || 12));
+    return (data && Array.isArray(data.results) ? data.results : [])
+      .map(toItunesAlbumRaw).filter(Boolean);
+  }
+
+  function cleanSearchQuery(query) {
+    let text = String(query || '').trim().replace(/\s+/g, ' ');
+    text = text.replace(/^(?:please\s+)?(?:can\s+you\s+)?(?:play|search|find|show|open|get|look\s+up)\s+/i, '');
+    text = text.replace(/^(?:for|about)\s+/i, '');
+    text = text.replace(/^(?:the\s+)?(?:albums?|songs?|artists?|tracks?|music)\s+(?:called\s+|named\s+|titled\s+|entitled\s+|for\s+|by\s+|from\s+)?/i, '');
+    text = text.replace(/\s+by\s+/gi, ' ');
+    text = text.replace(/\s+(?:feat|featuring)\.?\s+.+$/i, '');
+    return text.trim();
+  }
+
+  function searchQueryVariants(query) {
+    const clean = cleanSearchQuery(query);
+    if (!clean) return [];
+    const variants = [clean];
+    const bare = clean.replace(/^(?:the|a|an)\s+/i, '');
+    if (bare && bare !== clean) variants.push(bare);
+    if (/^the\s+/i.test(clean)) variants.push('this ' + clean.replace(/^the\s+/i, ''));
+    if (/^this\s+/i.test(clean)) variants.push('the ' + clean.replace(/^this\s+/i, ''));
+    const seen = new Set();
+    return variants.filter((value) => {
+      const key = value.toLowerCase();
+      if (!value || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 4);
+  }
+
+  /* Search relevance is stricter than "contains one word". A query such as
+     "bohemian rhapsody queen" must not surface a Panic! cover, and an album
+     query must not drift to an unrelated artist that shares a word. */
+  const SEARCH_STOP_WORDS = new Set([
+    'the', 'a', 'an', 'by', 'from', 'feat', 'featuring', 'and', 'with',
+    'song', 'songs', 'album', 'albums', 'artist', 'artists', 'track',
+    'tracks', 'music', 'of', 'for', 'called', 'named', 'titled'
+  ]);
+
+  function searchNorm(value) {
+    return decode(value || '')
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function searchWords(value) {
+    return searchNorm(value).split(' ')
+      .filter((word) => word && word.length > 1 && !SEARCH_STOP_WORDS.has(word));
+  }
+
+  function coverageCount(text, words) {
+    const haystack = searchNorm(text);
+    return (words || []).filter((word) => haystack.indexOf(word) >= 0).length;
+  }
+
+  function parseSearchIntent(query) {
+    const raw = String(query || '').trim();
+    let artist = '';
+    let titleSource = raw;
+    const explicit = /\s+(?:by|from)\s+(.+)$/i.exec(raw);
+    if (explicit) {
+      artist = cleanSearchQuery(explicit[1]);
+      titleSource = raw.slice(0, explicit.index);
+    }
+    const title = cleanSearchQuery(titleSource);
+    return { title: title, artist: artist, words: searchWords(title + ' ' + artist) };
+  }
+
+  function stripTrailingArtist(title, artist) {
+    const titleWords = searchWords(title);
+    const artistWords = searchWords(artist);
+    if (!artistWords.length || artistWords.length > titleWords.length) {
+      return artistWords.length ? '' : title;
+    }
+    return titleWords.slice(0, titleWords.length - artistWords.length).join(' ');
+  }
+
+  function inferIntentArtist(intent, artists) {
+    if (!intent || intent.artist) return intent.artist || '';
+    const parts = searchNorm(intent.title).split(' ').filter(Boolean);
+    const names = (artists || [])
+      .map((artist) => searchNorm(artist && (artist.name || artist.title)))
+      .filter(Boolean);
+    if (!parts.length || !names.length) return '';
+    for (let size = Math.min(3, parts.length - 1); size >= 1; size -= 1) {
+      const candidate = parts.slice(-size).join(' ');
+      if (names.some((name) => name === candidate)) return candidate;
+    }
+    return '';
+  }
+
+  function itemRelevance(item, intent, kind) {
+    const words = (intent && intent.words) || [];
+    if (!words.length || !item) return 1;
+    const titleText = kind === 'artist'
+      ? String(item.name || item.title || '')
+      : String(item.title || item.name || '');
+    const artistText = kind === 'artist' ? titleText : String(item.artist || '');
+    const artistWords = searchWords(intent.artist);
+    const titleWords = searchWords(intent.title);
+    let score = 0;
+
+    if (artistWords.length) {
+      const nameText = kind === 'artist' ? titleText : artistText;
+      const artistCoverage = coverageCount(nameText, artistWords);
+      if (artistCoverage < Math.ceil(artistWords.length / 2)) return 0;
+      score += 8 + artistCoverage * 2;
+      if (titleWords.length && kind !== 'artist') {
+        const titleCoverage = coverageCount(titleText, titleWords);
+        if (!titleCoverage) return 0;
+        score += titleCoverage * 3;
+        if (titleCoverage === titleWords.length) score += 4;
+      }
+      return score;
+    }
+
+    const coverage = coverageCount(titleText + ' ' + artistText, words);
+    if (coverage < Math.max(1, Math.ceil(words.length / 2))) return 0;
+    score += coverage * 2;
+    if (coverageCount(titleText, words) >= Math.ceil(words.length / 2)) score += 3;
+    return score;
+  }
+
+  function filterRelevant(items, intent, kind) {
+    return (items || []).map((item, index) => ({
+      item: item,
+      index: index,
+      score: itemRelevance(item, intent, kind)
+    })).filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score || a.index - b.index)
+      .map((entry) => entry.item);
   }
 
   async function itunesLookup(id, entity) {
@@ -348,24 +532,6 @@
 
   function mapToJioFull(items) {
     return (items || []).map((item) => jioFullTrackFor(item) || item);
-  }
-
-  function isLocalDesktop() {
-    return /^http:\/\/127\.0\.0\.1:\d+$/.test(location.origin);
-  }
-
-  let jioWebSearchAvailable = true;
-
-  async function jioWebSearch(query) {
-    if (!isLocalDesktop() || !jioWebSearchAvailable) return null;
-    try {
-      const data = await fetchJson(location.origin, '/__jio/search?q=' + encodeURIComponent(query));
-      if (!data || !data.success || !Array.isArray(data.results)) return null;
-      return data.results;
-    } catch (error) {
-      jioWebSearchAvailable = false;
-      return null;
-    }
   }
 
   function jioBadTrack(track) {
@@ -505,9 +671,13 @@
     const resolved = await resolveJioFull(id);
     if (token !== playRequestId) return { success: false, stale: true };
     currentTrack = resolved.track;
-    if (meta && meta.cover && !currentTrack.cover) {
-      currentTrack.cover = meta.cover;
-      currentTrack.image = meta.cover;
+    if (meta && !currentTrack.cover) {
+      const verifiedCover = MV.artwork ? MV.artwork.normalize(meta.cover) : meta.cover;
+      if (verifiedCover) {
+        currentTrack.cover = verifiedCover;
+        currentTrack.image = verifiedCover;
+        if (MV.artwork) MV.artwork.associate(currentTrack, verifiedCover);
+      }
     }
     rememberStreams([currentTrack]);
     await startPlayback(resolved.urls, token);
@@ -515,11 +685,150 @@
     return { success: true, source: 'jiosaavn', full: true };
   }
 
+  /* Spotify supplies discovery, artwork and names only. Every Spotify item is
+     remapped to a full-length JioSaavn stream before audio starts; if there is
+     no strong Jio match, playback fails with a clear message instead of
+     silently falling back to a 30-second preview. */
+  function compactSpotifyMeta(item) {
+    const source = item || {};
+    const raw = source.raw || {};
+    const isrc = source.isrc || (raw.external_ids && raw.external_ids.isrc) || '';
+    return {
+      id: source.id,
+      title: source.title || '',
+      artist: source.artist || '',
+      album: source.album || '',
+      duration: source.duration || '0',
+      language: source.language || '',
+      provider: 'spotify',
+      path: source.path || ('stream:spotify:' + source.id),
+      cover: source.cover || '',
+      image: source.image || source.cover || '',
+      spotifyId: source.spotifyId || raw.id || '',
+      spotifyUrl: source.spotifyUrl || '',
+      isrc: isrc,
+      raw: {
+        id: raw.id || source.spotifyId || '',
+        external_ids: { isrc: isrc },
+        album: { name: source.album || '', images: (raw.album && raw.album.images) || [] }
+      }
+    };
+  }
+
+  function persistSpotifyMeta() {
+    const values = [];
+    spotifyMeta.forEach((item, key) => {
+      if (!item || key !== item.id || !item.title) return;
+      values.push(compactSpotifyMeta(item));
+    });
+    write(SPOTIFY_META_KEY, JSON.stringify(values.slice(-MAX_STORED_SPOTIFY_META)));
+  }
+
+  function loadPersistedSpotifyMeta() {
+    const saved = loadObject(SPOTIFY_META_KEY, []);
+    if (!Array.isArray(saved)) return;
+    saved.slice(-MAX_STORED_SPOTIFY_META).forEach((item) => {
+      const compact = compactSpotifyMeta(item);
+      if (compact.id && compact.id.indexOf('spotify-') === 0 && compact.title) {
+        spotifyMeta.set(compact.id, compact);
+      }
+    });
+  }
+
+  function rememberSpotify(items, persist) {
+    (items || []).forEach((item) => {
+      if (!item) return;
+      const id = String(item.id || '');
+      if (id.indexOf('spotify-') !== 0) return;
+      spotifyMeta.set(id, item);
+      if (item.spotifyId && item.album) spotifyMeta.set('spotify-album-' + item.spotifyId, item);
+      if (item.raw && item.raw.id && item.artist) {
+        spotifyMeta.set('spotify-artist-' + item.raw.id, item);
+      }
+    });
+    if (persist) persistSpotifyMeta();
+  }
+
+  function rememberSpotifyCollections(albums, artists) {
+    (albums || []).forEach((album) => {
+      if (album && album.id) spotifyAlbumMeta.set(String(album.id), album);
+    });
+    (artists || []).forEach((artist) => {
+      if (artist && artist.id) spotifyArtistMeta.set(String(artist.id), artist);
+    });
+  }
+
+  function spotifyTrackMeta(id) {
+    const key = String(id || '');
+    const full = key.indexOf('spotify-') === 0 ? key : 'spotify-' + key;
+    return spotifyMeta.get(full) || (MV.spotify ? MV.spotify.trackById(full) : null);
+  }
+
+  function dedupeBy(items, keyFn) {
+    const seen = new Set();
+    return (items || []).filter((item) => {
+      if (!item) return false;
+      const key = String(keyFn(item) || '');
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  function spotifyTrackKey(track) {
+    return MV.spotify ? MV.spotify.trackDupeKey(track) : String(track && track.id);
+  }
+
+  function spotifyArtistKey(artist) {
+    return MV.spotify ? MV.spotify.artistDupeKey(artist) : String(artist && artist.id);
+  }
+
+  function spotifyAlbumKey(album) {
+    return MV.spotify ? MV.spotify.albumDupeKey(album) : String(album && album.id);
+  }
+
+  async function mapSpotifyToJio(tracks, query) {
+    const list = (tracks || []).slice(0, 30);
+    if (!list.length) return [];
+    const candidates = await jioLiveSearch(query || list[0].title + ' ' + list[0].artist, 50);
+    return list.map((track) => {
+      const bundled = jioFullTrackFor(track);
+      if (bundled) return bundled;
+      const ranked = candidates.map((candidate) => ({
+        track: candidate,
+        score: jioMatchScore(candidate, track.title, track.artist)
+      })).sort((a, b) => b.score - a.score);
+      const best = ranked[0];
+      return best && best.score >= 8 ? toJioFullTrack(best.track.id, best.track) : track;
+    });
+  }
+
+  async function playSpotify(id) {
+    const token = ++playRequestId;
+    let meta = spotifyTrackMeta(id);
+    // Imported playlists are stored locally without provider raw payloads.
+    // Re-fetching the Spotify track keeps playback available after a reload.
+    if (!meta && MV.spotify && MV.spotify.track) meta = await MV.spotify.track(id);
+    if (meta) rememberSpotify([meta]);
+    if (!meta) {
+      return { success: false, message: 'Spotify metadata expired. Search or open the mix again.' };
+    }
+    const bundled = jioFullTrackFor(meta);
+    const full = bundled || await jioLiveMatch(meta.title, meta.artist);
+    if (token !== playRequestId) return { success: false, stale: true };
+    if (!full) {
+      return { success: false, message: 'No full-length JioSaavn stream matched this Spotify track.' };
+    }
+    rememberStreams([full]);
+    return playJioFull(full.id, meta, token);
+  }
+
   function seedTracks() {
     return (MV.webSeed || []).map((item) => {
       const provider = item.provider || (String(item.id).indexOf('itunes-') === 0 ? 'itunes' : 'jiosaavn');
       const id = String(item.id);
-      const stream = item.stream || '';
+      const stream = provider === 'itunes' ? '' : (item.stream || '');
+      const cover = MV.data.normalizeCover(item.cover, id, decode(item.title));
       if (stream) streamCache.set(id, [stream]);
       return {
         id: id,
@@ -530,9 +839,9 @@
         language: item.language || '',
         provider: provider,
         path: item.path || ('stream:' + provider + ':' + id),
-        cover: item.cover || '',
-        image: item.cover || '',
-        downloadUrl: stream ? [{ quality: provider === 'itunes' ? 'preview' : '160kbps', url: stream }] : [],
+        cover: cover,
+        image: cover,
+        downloadUrl: stream ? [{ quality: '160kbps', url: stream }] : [],
         raw: Object.assign({ provider: provider }, item)
       };
     });
@@ -542,9 +851,11 @@
     const cache = loadObject(CACHE_KEY, {});
     return Object.keys(cache).map((id) => {
       const item = cache[id];
-      const streams = Array.isArray(item.streams) ? item.streams : (item.stream ? [item.stream] : []);
+      const streams = (Array.isArray(item.streams) ? item.streams : (item.stream ? [item.stream] : []))
+        .filter((url) => !/audio-ssl\.itunes\.apple\.com|itunes-assets|mzaf_/i.test(String(url)));
       if (streams.length) streamCache.set(id, streams);
       const provider = item.provider || (id.indexOf('itunes-') === 0 ? 'itunes' : 'jiosaavn');
+      const cover = MV.data.normalizeCover(item.cover, id, item.title || id);
       return {
         id: id,
         title: item.title || id,
@@ -554,8 +865,8 @@
         language: item.language || '',
         provider: provider,
         path: item.path || ('stream:' + provider + ':' + id),
-        cover: item.cover || '',
-        image: item.cover || '',
+        cover: cover,
+        image: cover,
         downloadUrl: streams.map((url) => ({ url: url })),
         raw: item
       };
@@ -612,9 +923,10 @@
     });
   }
 
-  function rankTracks(tracks, query) {
+  function rankTracks(tracks, query, spotifyFirst, intent) {
     const needle = String(query || '').trim().toLowerCase();
     if (!needle) return tracks;
+    const artistWords = searchWords(intent && intent.artist);
     return tracks.map((track, index) => {
       const title = String(track.title || '').toLowerCase();
       const artist = String(track.artist || '').toLowerCase();
@@ -623,8 +935,11 @@
       else if (title === needle) score = 5;
       else if (artist.indexOf(needle) >= 0 || title.indexOf(needle) >= 0) score = 4;
       else if (needle.split(/\s+/).some((part) => part && (artist.indexOf(part) >= 0 || title.indexOf(part) >= 0))) score = 2;
+      if (artistWords.length &&
+          coverageCount(artist, artistWords) >= Math.ceil(artistWords.length / 2)) score += 5;
       if (track.provider === 'jiosaavn' && (track.downloadUrl || []).length &&
-          Number(track.duration) > 40) score += 8;
+          Number(track.duration) > 40) score += spotifyFirst ? 2 : 8;
+      if (track.provider === 'spotify' && spotifyFirst) score += 9;
       if (track.provider === 'itunes') score -= 4;
       return { track, score, index };
     }).sort((a, b) => b.score - a.score || a.index - b.index).map((entry) => entry.track);
@@ -672,27 +987,6 @@
 
   function apiFetch(path) { return fetchJson(apiBase, path); }
   function itunesFetch(path) { return fetchJson(ITUNES_API, path); }
-
-  function resultsOf(container) {
-    return (container && Array.isArray(container.results)) ? container.results : [];
-  }
-
-  async function searchCatalogue(query) {
-    const needle = encodeURIComponent(query);
-    const [global, songResults] = await Promise.all([
-      apiFetch('/search?query=' + needle),
-      apiFetch('/search/songs?query=' + needle + '&limit=20')
-    ]);
-    const source = global && global.data ? global.data : {};
-    // The dedicated song search includes downloadUrl values, so cache those
-    // tracks; the global search is used for albums and artists.
-    const songSource = songResults && songResults.data ? songResults.data : source.songs;
-    const songs = resultsOf(songSource).map(toTrackRaw).filter(Boolean);
-    const albums = resultsOf(source.albums).map(toAlbumRaw).filter(Boolean);
-    const artists = resultsOf(source.artists).map(toArtistRaw).filter(Boolean);
-    rememberStreams(songs.slice(0, 40));
-    return { songs: songs, albums: albums, artists: artists };
-  }
 
   function localMatches(query) {
     const needle = String(query || '').trim().toLowerCase();
@@ -804,7 +1098,7 @@
         if (token !== playRequestId) return { success: false, stale: true };
         lookupItem = items.find((entry) => String(entry.trackId) === rawId) || null;
         if (lookupItem) track = toItunesTrackRaw(lookupItem);
-      } catch (error) { /* use the cached preview below */ }
+      } catch (error) { /* metadata lookup only; full stream is resolved below */ }
     }
 
     if (track) {
@@ -813,27 +1107,9 @@
       if (full) return playJioFull(full.id, track, token);
     }
 
-    let urls = streamCache.get(key);
-    if ((!urls || !urls.length) && lookupItem && lookupItem.previewUrl) {
-      currentTrack = track || toItunesTrackRaw(lookupItem);
-      urls = [lookupItem.previewUrl];
-    }
-    if (!urls || !urls.length) {
-      return { success: false, message: 'This track is not currently available.' };
-    }
-    if (!currentTrack) {
-      currentTrack = itunesMeta.get(key) || seedTracks().concat(cachedTracks())
-        .find((item) => String(item.id) === key) || null;
-    }
-    try {
-      await startPlayback(urls, token);
-      if (token !== playRequestId) return { success: false, stale: true };
-      return { success: true, source: 'itunes', preview: true };
-    } catch (error) {
-      if (token !== playRequestId) return { success: false, stale: true };
-      playbackState = 'paused';
-      return { success: false, message: 'Playback was blocked — click play again.' };
-    }
+    /* iTunes audio is a 30-second preview. Never start it: the only valid
+       playback source here is the full JioSaavn match resolved above. */
+    return { success: false, message: 'No full-length stream found for this song.' };
   }
 
   async function playLocal(path) {
@@ -1032,38 +1308,34 @@
       const queries = ['top hindi songs', 'bollywood hits', 'arijit singh', 'romantic hindi', 'english hits'];
       const mainstreamQueries = ['Joji', 'The Weeknd', 'Billie Eilish', 'Taylor Swift',
         'Imagine Dragons', 'Ed Sheeran', 'Steve Lacy', 'Doechii', 'Tame Impala'];
-      const [jioSettled, itunesSettled, liveSettled] = await Promise.all([
-        Promise.allSettled(queries.map(searchCatalogue)),
-        Promise.allSettled(mainstreamQueries.map((name) => itunesSearchSongs(name, 8))),
-        Promise.allSettled(mainstreamQueries.map((name) => jioLiveSearch(name, 8)))
+      const allQueries = queries.concat(mainstreamQueries);
+      const [songSettled, albumSettled] = await Promise.all([
+        Promise.allSettled(allQueries.map((name) => itunesSearchSongs(name, 8))),
+        Promise.allSettled(mainstreamQueries.map((name) => itunesSearchAlbums(name, 8)))
       ]);
 
-      let jioSongs = [];
-      let jioAlbums = [];
-      let jioArtists = [];
-      jioSettled.filter((item) => item.status === 'fulfilled').forEach((item) => {
-        jioSongs = jioSongs.concat(item.value.songs);
-        jioAlbums = jioAlbums.concat(item.value.albums);
-        jioArtists = jioArtists.concat(item.value.artists);
-      });
-
       let itunesSongs = [];
-      itunesSettled.filter((item) => item.status === 'fulfilled').forEach((item) => {
+      songSettled.filter((item) => item.status === 'fulfilled').forEach((item) => {
         itunesSongs = itunesSongs.concat(item.value);
       });
-      let liveSongs = [];
-      liveSettled.filter((item) => item.status === 'fulfilled').forEach((item) => {
-        liveSongs = liveSongs.concat(item.value);
+      let itunesAlbums = [];
+      albumSettled.filter((item) => item.status === 'fulfilled').forEach((item) => {
+        itunesAlbums = itunesAlbums.concat(item.value);
       });
       const sourceItems = itunesSongs.slice(0, 40).map((track) => track.raw).filter(Boolean);
-      const mainstreamArtists = sourceItems.map((item) => toItunesArtistRaw(item)).filter(Boolean);
-      const mainstreamAlbums = sourceItems.map((item) => toItunesAlbumRaw(item)).filter(Boolean);
-      const catalogSongs = featuredCatalogTracks(12);
+      const mainstreamArtists = dedupeBy(
+        sourceItems.map((item) => toItunesArtistRaw(item)).filter(Boolean), spotifyArtistKey
+      );
+      const mainstreamAlbums = dedupeBy(
+        itunesAlbums.concat(sourceItems.map((item) => toItunesAlbumRaw(item)).filter(Boolean)),
+        spotifyAlbumKey
+      );
+      const catalogSongs = featuredCatalogTracks(24);
 
-      let songs = dedupeById(catalogSongs.concat(liveSongs, mapToJioFull(jioSongs)));
+      let songs = dedupeById(catalogSongs.concat(mapToJioFull(itunesSongs)));
       if (!songs.length) songs = dedupeById(mapToJioFull(itunesSongs));
-      const albums = dedupeById(jioAlbums.concat(mainstreamAlbums));
-      const artists = dedupeById(jioArtists.concat(mainstreamArtists));
+      const albums = mainstreamAlbums;
+      const artists = mainstreamArtists;
 
       if (!songs.length) {
         songs = seedTracks().concat(cachedTracks());
@@ -1084,46 +1356,80 @@
       const needle = String(query || '').trim();
       if (!needle) return { success: true, results: [], albums: [], artists: [], source: 'online' };
       try {
-        const [jioResult, songResult, artistResult, jioWebResult, liveResult] = await Promise.allSettled([
-          searchCatalogue(needle),
-          itunesSearchSongs(needle, 20),
-          itunesSearchArtists(needle, 10),
-          jioWebSearch(needle),
-          jioLiveSearch(needle, 30)
+        const queries = searchQueryVariants(needle);
+        const spotifySettled = await Promise.allSettled([
+          MV.spotify ? MV.spotify.search(needle)
+            : Promise.resolve({ available: false, tracks: [], albums: [], artists: [] })
         ]);
-        const jio = jioResult.status === 'fulfilled'
-          ? jioResult.value : { songs: [], albums: [], artists: [] };
-        const itunesSongs = songResult.status === 'fulfilled' ? songResult.value : [];
-        const itunesArtists = artistResult.status === 'fulfilled' ? artistResult.value : [];
+        const spotify = spotifySettled[0].status === 'fulfilled'
+          ? spotifySettled[0].value
+          : { available: false, tracks: [], albums: [], artists: [] };
+
+        /* Search metadata comes from Spotify and iTunes only. JioSaavn is not
+           queried here; it is used later, when playback needs a full stream. */
+        let itunesSongs = [];
+        let itunesAlbums = [];
+        let itunesArtists = [];
+        for (const text of queries) {
+          const [songSettled, albumSettled, artistSettled] = await Promise.allSettled([
+            itunesSearchSongs(text, 20),
+            itunesSearchAlbums(text, 12),
+            itunesSearchArtists(text, 10)
+          ]);
+          if (songSettled.status === 'fulfilled') itunesSongs = itunesSongs.concat(songSettled.value);
+          if (albumSettled.status === 'fulfilled') itunesAlbums = itunesAlbums.concat(albumSettled.value);
+          if (artistSettled.status === 'fulfilled') itunesArtists = itunesArtists.concat(artistSettled.value);
+          if (itunesSongs.length && itunesAlbums.length) break;
+        }
+
         const songArtists = itunesSongs.slice(0, 8)
           .map((track) => toItunesArtistRaw(track.raw)).filter(Boolean);
-        const dynamicJio = jioWebResult.status === 'fulfilled' && Array.isArray(jioWebResult.value)
-          ? jioWebResult.value.map((item) => toJioFullTrack(item.id, {
-            title: item.title,
-            artist: item.artist,
-            album: item.album,
-            duration: item.duration,
-            cover: item.cover,
-            raw: item
-          })).filter(Boolean) : [];
-        const liveJio = liveResult.status === 'fulfilled' ? liveResult.value : [];
+        const songAlbums = itunesSongs.slice(0, 12)
+          .map((track) => toItunesAlbumRaw(track.raw)).filter(Boolean);
 
-        const catalogMatches = searchJioCatalog(needle, 15);
-        let songs = dedupeById(liveJio.concat(catalogMatches, dynamicJio, mapToJioFull(jio.songs)));
-        if (songs.length < 6) {
-          songs = dedupeById(songs.concat(mapToJioFull(itunesSongs)));
+        const intent = parseSearchIntent(needle);
+        const inferredArtist = inferIntentArtist(
+          intent, (spotify.artists || []).concat(itunesArtists, songArtists)
+        );
+        if (inferredArtist && !intent.artist) {
+          intent.artist = inferredArtist;
+          intent.title = stripTrailingArtist(intent.title, inferredArtist);
+          intent.words = searchWords(intent.title + ' ' + intent.artist);
         }
-        songs = rankTracks(songs, needle).slice(0, 40);
-        const artists = rankArtists(dedupeById(jio.artists.concat(itunesArtists, songArtists)), needle).slice(0, 12);
-        const albums = dedupeById(jio.albums).slice(0, 12);
-        rememberStreams(songs);
+
+        rememberSpotify(spotify.tracks);
+        rememberSpotifyCollections(spotify.albums, spotify.artists);
+        let songs = dedupeBy(
+          spotify.tracks.concat(mapToJioFull(itunesSongs)), spotifyTrackKey
+        );
+        const relevantSongs = filterRelevant(songs, intent, 'song');
+        songs = rankTracks(
+          relevantSongs.length ? relevantSongs : songs,
+          queries[0] || needle, true, intent
+        ).slice(0, 40);
+
+        const albumPool = dedupeBy(
+          spotify.albums.concat(itunesAlbums, songAlbums), spotifyAlbumKey
+        );
+        const relevantAlbums = filterRelevant(albumPool, intent, 'album');
+        const albums = (relevantAlbums.length ? relevantAlbums : albumPool).slice(0, 12);
+
+        const artistPool = dedupeBy(
+          spotify.artists.concat(itunesArtists, songArtists), spotifyArtistKey
+        );
+        const relevantArtists = filterRelevant(artistPool, intent, 'artist');
+        const artists = relevantArtists.length ? relevantArtists : artistPool;
+        rememberStreams(songs.filter((song) => song.provider !== 'spotify'));
         return {
           success: true,
           results: songs,
           albums: albums,
-          artists: artists,
+          artists: rankArtists(artists, queries[0] || needle).slice(0, 12),
           source: 'online',
-          offline: false
+          offline: false,
+          spotify: Boolean(spotify.available),
+          spotifyFirst: Boolean(spotify.tracks.length),
+          indianPriority: false
         };
       } catch (error) {
         const local = localMatches(query);
@@ -1154,6 +1460,24 @@
           return { success: true, tracks: fullTracks };
         } catch (error) {
           return { success: true, tracks: [] };
+        }
+      }
+      if (albumId.indexOf('spotify-album-') === 0) {
+        try {
+          const meta = spotifyAlbumMeta.get(albumId);
+          const query = [meta && meta.title, meta && meta.artist].filter(Boolean).join(' ');
+          const spotifyTracks = meta && MV.spotify
+            ? await MV.spotify.albumTracks(meta.spotifyId || albumId)
+            : [];
+          rememberSpotify(spotifyTracks);
+          let tracks = spotifyTracks.length ? await mapSpotifyToJio(spotifyTracks, query) : [];
+          if (!tracks.length && query) {
+            tracks = (await jioLiveSearch(query, 50)).slice(0, 30);
+          }
+          rememberStreams(tracks);
+          return { success: true, tracks: tracks, source: 'spotify+jiosaavn' };
+        } catch (error) {
+          return { success: true, tracks: [], source: 'spotify+jiosaavn' };
         }
       }
       try {
@@ -1214,6 +1538,50 @@
             albums: [], singles: [], similar_artists: [], playlists: [], bio: '', source_url: '' };
         }
       }
+      if (rawArtistId.indexOf('spotify-artist-') === 0) {
+        try {
+          const meta = spotifyArtistMeta.get(rawArtistId);
+          const details = meta && MV.spotify ? await MV.spotify.artistDetails(rawArtistId) : null;
+          const spotifyTracks = details
+            ? details.tracks
+            : (meta && MV.spotify ? await MV.spotify.artistTracks(rawArtistId) : []);
+          rememberSpotify(spotifyTracks);
+          const query = String((meta && (meta.name || meta.title)) || '') + ' songs';
+          let tracks = spotifyTracks.length ? await mapSpotifyToJio(spotifyTracks, query) : [];
+          if (!tracks.length && query.trim()) {
+            tracks = (await jioLiveSearch(query, 40)).slice(0, 20);
+          }
+          const artist = (details && details.artist) || meta || {
+            id: rawArtistId,
+            name: 'Artist',
+            title: 'Artist',
+            kind: 'artist',
+            cover: D.coverFor(rawArtistId, 'Artist', true)
+          };
+          rememberStreams(tracks.slice(0, 40));
+          if (section === 'songs') {
+            const size = Number(limit) || 20;
+            const start = (Number(page) || 0) * size;
+            return { success: true, songs: tracks.slice(start, start + size) };
+          }
+          return {
+            success: true,
+            artist: artist,
+            songs: tracks.slice(0, 20),
+            albums: (details && details.albums) || [],
+            singles: [],
+            similar_artists: [],
+            playlists: [],
+            bio: (details && details.bio) || '',
+            source_url: artist.spotifyUrl || ''
+          };
+        } catch (error) {
+          const local = localMatches('');
+          return { success: true, artist: { id: rawArtistId, name: 'Artist', title: 'Artist', kind: 'artist',
+            cover: D.coverFor(rawArtistId, 'Artist', true) }, songs: local.songs.slice(0, 8),
+            albums: [], singles: [], similar_artists: [], playlists: [], bio: '', source_url: '' };
+        }
+      }
 
       const artistId = encodeURIComponent(id);
       try {
@@ -1257,9 +1625,12 @@
     },
 
     play_jiosaavn_track: playJioSaavn,
+    rememberSpotify(items) { rememberSpotify(items, true); },
     play_provider_track(id) {
-      if (String(id || '').indexOf('itunes-') === 0) return playItunes(id);
-      return playJioSaavn(id);
+      const key = String(id || '');
+      if (key.indexOf('spotify-') === 0) return playSpotify(key);
+      if (key.indexOf('itunes-') === 0) return playItunes(key);
+      return playJioSaavn(key);
     },
     play_song: playLocal,
 
@@ -1365,6 +1736,7 @@
   };
 
   loadPersistedLibrary();
+  loadPersistedSpotifyMeta();
   cachedTracks();
   window.MV = MV;
   MV.webApi = webApi;

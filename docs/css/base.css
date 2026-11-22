@@ -330,6 +330,49 @@ body.no-ambience .ambient { opacity: 0; }
 .switch-row input:checked + .switch { background: var(--accent); }
 .switch-row input:checked + .switch::after { transform: translateX(17px); }
 
+/* Advance settings entry card and range controls. */
+.account-card--advanced {
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), .12), transparent 62%);
+  border-color: rgba(var(--accent-rgb), .22);
+}
+.account-card--advanced .btn { margin-top: 14px; }
+
+.setting-range { margin-top: 16px; }
+.setting-range__row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.setting-range__row span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.setting-range input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.setting-range__value {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+/* Central artwork loader: a generated placeholder is always painted first,
+   then the verified remote image fades in without changing layout. */
+.cover-image { transition: opacity .24s ease, filter .24s ease; }
+.cover-image.is-artwork-loading { opacity: .72; }
+.cover-image.is-artwork-loaded { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-image { transition: none; }
+}
+
 /* ---------- shared surfaces ---------- */
 
 .glass {

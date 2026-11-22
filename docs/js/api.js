@@ -147,7 +147,9 @@
       return fallback;
     };
 
-    if (!isLive() || !artist.id) return fillFallback();
+    // Bundled artists use local IDs (ar1, ar2, ...). They are not valid
+    // JioSaavn IDs, so skip the remote lookup and avoid a guaranteed failure.
+    if (!isLive() || !artist.id || (D.getArtist && D.getArtist(artist.id))) return fillFallback();
 
     try {
       const response = await call(
@@ -236,6 +238,63 @@
     try {
       const response = await call('get_jiosaavn_lyrics', String(trackId));
       return response && response.available ? response.lyrics : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /* Synced lyrics are metadata only. The desktop build asks the local bridge
+     (which avoids file:// CORS); the static web build uses LRCLIB directly. */
+  async function syncedLyrics(track) {
+    if (!track) return null;
+    const title = String(track.title || '').trim();
+    const artist = String(track.artist || '').trim();
+    if (!title) return null;
+
+    const api = bridge();
+    if (api && typeof api.get_synced_lyrics === 'function') {
+      try {
+        const response = await call('get_synced_lyrics', title, artist, Number(track.duration) || 0);
+        if (!response || !response.success) return null;
+        return {
+          synced: response.syncedLyrics || '',
+          plain: response.plainLyrics || '',
+          source: response.source || 'LRCLIB',
+          title: response.trackName || title,
+          artist: response.artistName || artist
+        };
+      } catch (error) {
+        return null;
+      }
+    }
+
+    try {
+      const query = new URLSearchParams({ track_name: title });
+      if (artist) query.set('artist_name', artist);
+      let response = await fetch('https://lrclib.net/api/get?' + query.toString(), {
+        headers: { Accept: 'application/json' }
+      });
+      let data = response.ok ? await response.json() : null;
+      if (!data) {
+        const term = title + (artist ? ' ' + artist : '');
+        const search = await fetch('https://lrclib.net/api/search?q=' + encodeURIComponent(term), {
+          headers: { Accept: 'application/json' }
+        });
+        if (!search.ok) return null;
+        const results = await search.json();
+        const duration = Number(track.duration) || 0;
+        data = (Array.isArray(results) && results.find((item) =>
+          !duration || !item.duration || Math.abs(Number(item.duration) - duration) < 12
+        )) || (Array.isArray(results) && results[0]) || null;
+      }
+      if (!data) return null;
+      return {
+        synced: data.syncedLyrics || '',
+        plain: data.plainLyrics || '',
+        source: 'LRCLIB',
+        title: data.trackName || title,
+        artist: data.artistName || artist
+      };
     } catch (error) {
       return null;
     }
@@ -498,7 +557,7 @@
   MV.api = {
     bridge, isLive, call, waitForBridge,
     discover, search, albumTracks, artistTracks,
-    play, pause, resume, stop, seek, setVolume, progress, lyrics,
+    play, pause, resume, stop, seek, setVolume, progress, lyrics, syncedLyrics,
     ensureLibraryId, toggleLike, createPlaylist, deletePlaylist, renamePlaylist,
     setPlaylistCover, addToPlaylist, removeFromPlaylist, chooseFolder, folderPath,
     albumKey, saveAlbum, removeSavedAlbum, getTheme, setTheme, syncLibrary,

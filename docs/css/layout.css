@@ -291,7 +291,6 @@
 
 .page {
   display: none;
-  animation: page-in .55s var(--ease-out) both;
 }
 
 .page.is-active { display: block; }

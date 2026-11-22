@@ -34,13 +34,15 @@ finished; use its × button to dismiss it.
   Edit button underneath for changing or removing the picture and changing the
   name. On small screens the bottom tabs show the selected picture instead of
   the account label, and the mini player is compact like the Spotify app.
-- Flow State, ambient accents and the dynamic island navigation. Pages slide
-  past the in-between tabs when you switch, for example Home → Library →
-  Discover → Account. The top-right actions are collected in a single three-dot
-  menu. On Android and other small screens, the dynamic island is replaced by a
-  bottom tab bar, the layout is more compact, and the layout adapts for touch.
-  The Windows app intentionally disables these slide animations; the browser and
-  Android builds keep them.
+- Flow State, ambient accents and the dynamic island navigation. Page switches
+  use a short blur-in with no sliding. The top-right actions are collected in a
+  single three-dot menu. On Android and other small screens, the dynamic island
+  is replaced by a bottom tab bar, the layout is more compact, and the layout
+  adapts for touch.
+- The player's microphone button opens interactive synced lyrics: the active
+  line stays large and sharp while nearby lines shrink, tilt and blur. Tap a
+  line to seek to that moment. Spotify recommendations are no longer shown in
+  the queue.
 - Choose a local music folder (Chrome/Edge) or select local audio files
   (other browsers). Files stay on your device and are never uploaded.
 
@@ -82,6 +84,50 @@ and is only a fast fallback. These unofficial services can change or rate-limit
 without notice; this project is a portfolio demo, not a commercial streaming
 service.
 
+## Artwork reliability
+
+All covers, thumbnails, avatars and blurred artwork backgrounds now go through
+one `MV.artwork` module in `js/artwork.js`. It normalises provider URLs (HTTPS,
+higher-resolution CDN sizes), keeps provider-verified matches indexed by track,
+album, artist, ISRC and Spotify ID, and shows a generated local placeholder
+while a remote image is loading. If a URL fails, the manager tries the next
+verified source and finally keeps the placeholder, so broken-image icons are
+never shown. Visible artwork is loaded first, duplicate requests are shared, and
+no more than four image requests run at once.
+
+Working artwork bytes are cached in IndexedDB (`musicver-artwork-v2`) for 14 days
+when the image CDN allows CORS. If CORS is blocked, the image still displays
+normally but cannot be stored as a blob. Cache failures never stop rendering.
+To reset artwork storage, delete the `musicver-artwork-v2` database in site data.
+
+GitHub Pages does not need a backend. An optional, allowlisted Cloudflare Worker
+example is included at `worker/artwork-proxy.example.js`. It is disabled by
+default; only deploy it if you want validated CDN fetching and longer shared
+cache headers, then enable it from the console with:
+
+```js
+MV.artwork.configure({
+  allowProxy: true,
+  proxyEndpoint: 'https://your-worker.example.com/image'
+});
+```
+
+Never point it at an open or unrestricted image proxy.
+
+## Spotify playlist import
+
+Account → **SPOTIFY CATALOGUE → Import a playlist** lists the signed-in user's
+Spotify playlists and copies the chosen playlist into the local Library. The
+browser PKCE sign-in now asks for `playlist-read-private` and
+`playlist-read-collaborative`; playlists need this extra permission, so an older
+Spotify connection must be reconnected once. Only names, covers and track
+metadata are stored locally (no client secret and no Spotify audio). Imported
+tracks are still matched to full-length JioSaavn streams at play time, and
+Apple/Spotify 30-second previews are never used. After the reconnect, the import
+picker reopens automatically. Spotify only allows reading the items of playlists
+you own or collaborate on, so make a copy of any followed playlist before
+importing it.
+
 ## Browser support
 
 - **Best:** current Chrome or Edge. Folder access uses the File System Access
@@ -103,6 +149,7 @@ localStorage.removeItem('musicver.web.discovery.v1');
 localStorage.removeItem('musicver.web.localLibrary.v1');
 localStorage.removeItem('musicver.web.folderName');
 indexedDB.deleteDatabase('musicver-web');
+indexedDB.deleteDatabase('musicver-artwork-v2');
 location.reload();
 ```
 

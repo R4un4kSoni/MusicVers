@@ -668,7 +668,7 @@
 .seek__knob { position: absolute; top: 50%; left: 0; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); opacity: 0; transition: opacity .2s ease, background .5s ease; }
 .seek:hover .seek__knob { opacity: 1; }
 
-.player-extra { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.player-extra { display: flex; align-items: center; justify-content: flex-end; gap: 8px; transform: translateY(-12px); }
 .player-extra input[type="range"] {
   width: 92px;
   height: 4px;

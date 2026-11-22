@@ -6,7 +6,7 @@
   position: fixed;
   top: 18px;
   left: 50%;
-  z-index: 200;
+  z-index: 90;
   width: min(520px, calc(100% - 28px));
   padding: 20px 58px 20px 20px;
   border: 1px solid rgba(255, 255, 255, .9);
@@ -24,7 +24,7 @@
 .beta-notice.is-visible {
   opacity: 1;
   visibility: visible;
-  pointer-events: auto;
+  pointer-events: none;
   transform: translate(-50%, 0) scale(1);
 }
 .beta-notice__tag {
@@ -60,6 +60,7 @@
   color: var(--ink);
   font-size: 21px;
   line-height: 1;
+  pointer-events: auto;
   cursor: pointer;
   transition: background .18s ease, transform .18s ease;
 }
@@ -216,14 +217,6 @@ input[type="text"], input[type="search"] { height: 36px; padding: 0 11px; }
   width: 100%;
   max-width: 620px;
   text-align: center;
-  animation: wrapped-in .45s var(--ease-out) both;
-}
-/* Windows/desktop keeps tab and story changes instant. */
-.is-desktop .wrapped-slide { animation: none; }
-.is-desktop .pages.is-sliding .page { transition: none; }
-@keyframes wrapped-in {
-  from { opacity: 0; transform: translateY(18px) scale(.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .wrapped-kicker {
   margin: 0 0 12px;
@@ -334,23 +327,18 @@ input[type="text"], input[type="search"] { height: 36px; padding: 0 11px; }
 .lib-tile__copy strong { font-size: 12px; }
 .lib-tile__copy small { font-size: 10px; }
 
-/* Slide between pages. Home → Library → Discover → Account slides through
-   the intermediate tabs instead of cutting straight to the destination. */
-.pages.is-sliding { position: relative; overflow: hidden; }
-.pages.is-sliding .page {
-  display: block;
-  position: absolute;
-  inset: 0 0 auto 0;
-  pointer-events: none;
-  animation: none;
-  transform: translateX(var(--page-shift, 0%));
-  transition: transform .58s var(--ease-in-out);
-  will-change: transform;
+/* Soft blur-in used for tab, album, artist, playlist and filter switches.
+   It deliberately has no movement — only opacity and focus easing. */
+@keyframes mv-blur-in {
+  from { opacity: .35; filter: blur(6px); }
+  to { opacity: 1; filter: blur(0); }
 }
-.pages.is-sliding .page.is-active {
-  position: relative;
-  z-index: 2;
-  pointer-events: auto;
+.mv-switch-in {
+  animation: mv-blur-in .22s ease-out;
+  will-change: opacity, filter;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mv-switch-in { animation: none; will-change: auto; }
 }
 
 /* Compact top-right menu: one three-dot control instead of separate bubbles. */
@@ -567,6 +555,99 @@ input[type="text"], input[type="search"] { height: 36px; padding: 0 11px; }
 
   .flow-visual,
   .flow-vinyl { display: none; }
+}
+
+/* ---------------- compact playlist actions ---------------- */
+.playlist-actions { align-items: center; gap: 12px; }
+
+.playlist-play-big {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font-size: 23px;
+  line-height: 1;
+  box-shadow: 0 12px 28px rgba(43, 37, 28, .2);
+  transition: box-shadow .2s ease, filter .2s ease;
+}
+.playlist-play-big:hover { filter: brightness(1.06); }
+
+.playlist-action {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 25px;
+  font-weight: 300;
+  line-height: 1;
+  transition: background .2s ease, box-shadow .2s ease;
+}
+.playlist-action:hover { background: #fff; box-shadow: 0 6px 16px rgba(43, 37, 28, .12); }
+.playlist-action svg { width: 20px; height: 20px; fill: currentColor; }
+.player .control--add { font-size: 20px; font-weight: 300; line-height: 1; }
+
+/* ---------------- song suggestions modal ---------------- */
+.suggestion-list {
+  max-height: min(48vh, 360px);
+  overflow-y: auto;
+  margin: 16px 0 4px;
+  padding-right: 3px;
+  display: grid;
+  gap: 8px;
+}
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 14px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+}
+.suggestion-item__art {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--line);
+}
+.suggestion-item__art img { width: 100%; height: 100%; object-fit: cover; }
+.suggestion-item__copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.suggestion-item__copy strong,
+.suggestion-item__copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.suggestion-item__copy strong { font-size: 13px; }
+.suggestion-item__copy span { font-size: 11px; color: var(--ink-faint); }
+.suggestion-item__add {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 19px;
+  line-height: 1;
+}
+.suggestion-item__add:disabled { opacity: .5; cursor: default; }
+
+@media (max-width: 480px) {
+  .playlist-actions { gap: 10px; }
+  .playlist-play-big { width: 56px; height: 56px; flex-basis: 56px; font-size: 20px; }
+  .playlist-action { width: 40px; height: 40px; flex-basis: 40px; font-size: 23px; }
+  .stage-top__right { gap: 6px; }
 }
 
 @media (max-width: 480px) {

@@ -71,6 +71,32 @@
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
+  /**
+   * Remote artwork comes from several CDNs. Some records still carry insecure
+   * URLs (blocked on HTTPS) or tiny thumbnails, and some have no URL at all.
+   * Normalise every cover before it reaches an <img> so the local generated
+   * artwork is the reliable last line of defence.
+   */
+  function normalizeCover(value, seed, label, round) {
+    let url = '';
+    if (typeof value === 'string') url = value.trim();
+    else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      url = String(value.url || value.src || value.cover || '').trim();
+    }
+    if (!url) return coverFor(seed || label || 'musicver', label || seed || 'musicver', round);
+
+    if (url.indexOf('//') === 0) url = 'https:' + url;
+    else if (/^http:\/\//i.test(url)) url = 'https://' + url.slice(7);
+
+    url = url
+      .replace(/-150x150\.(jpg|jpeg|png)$/i, '-500x500.$1')
+      .replace(/-50x50\.(jpg|jpeg|png)$/i, '-500x500.$1');
+    if (/mzstatic\.com/i.test(url)) {
+      url = url.replace(/\d+x\d+bb\.(jpg|jpeg|png)$/i, '600x600bb.$1');
+    }
+    return url;
+  }
+
   function song(id, title, artist, album, duration, language) {
     return {
       id: id,
@@ -211,7 +237,7 @@
     if (!raw || typeof raw !== 'object') return null;
     const title = raw.title || raw.name || raw.song || 'Unknown title';
     const seed = title + '|' + (raw.artist || raw.primary_artists || '');
-    return {
+    const track = {
       id: raw.id != null ? String(raw.id) : 'local-' + hash(seed),
       title: String(title),
       artist: String(raw.artist || raw.primary_artists || raw.artists || 'Unknown artist'),
@@ -225,12 +251,14 @@
       cover: imageOf(raw) || coverFor(seed, title),
       raw: raw
     };
+    if (MV.artwork) MV.artwork.associate(track, imageOf(raw));
+    return track;
   }
 
   function normalizeAlbum(raw) {
     if (!raw || typeof raw !== 'object') return null;
     const title = raw.title || raw.name || 'Unknown album';
-    return {
+    const album = {
       id: String(raw.id || hash(title)),
       kind: 'album',
       title: String(title),
@@ -243,12 +271,14 @@
       cover: imageOf(raw) || coverFor(title + (raw.artist || ''), title),
       raw: raw
     };
+    if (MV.artwork) MV.artwork.associate(album, imageOf(raw));
+    return album;
   }
 
   function normalizeArtist(raw) {
     if (!raw || typeof raw !== 'object') return null;
     const name = raw.name || raw.title || 'Unknown artist';
-    return {
+    const artist = {
       id: String(raw.id || hash(name)),
       kind: 'artist',
       name: String(name),
@@ -259,6 +289,8 @@
       cover: imageOf(raw) || coverFor(name, name, true),
       raw: raw
     };
+    if (MV.artwork) MV.artwork.associate(artist, imageOf(raw));
+    return artist;
   }
 
   function searchLocal(query) {
@@ -275,7 +307,7 @@
 
   MV.data = {
     songs, albums, artists, heroes, genres,
-    coverFor, getSong, getAlbum, getArtist, byLanguage,
+    coverFor, normalizeCover, getSong, getAlbum, getArtist, byLanguage,
     normalizeTrack, normalizeAlbum, normalizeArtist,
     searchLocal, parseDuration, imageOf, hash
   };

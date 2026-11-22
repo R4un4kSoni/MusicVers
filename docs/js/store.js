@@ -14,7 +14,8 @@
       picture: '',
       flowAuto: false,
       ambience: true,
-      rememberSearches: true
+      rememberSearches: true,
+      lyricsSwitchSpeed: 1
     },
     liked: [],
     savedAlbums: [],
@@ -204,6 +205,26 @@
       const playlist = store.getPlaylist(id);
       if (!playlist || !song || playlist.songs.some((item) => sameId(item.id, song.id))) return false;
       playlist.songs.push(compact(song));
+      save();
+      return true;
+    },
+
+    setPlaylistSongs(id, songs) {
+      const playlist = store.getPlaylist(id);
+      if (!playlist) return false;
+      playlist.songs = (Array.isArray(songs) ? songs : []).filter(Boolean).map(compact);
+      save();
+      return true;
+    },
+
+    setPlaylistMeta(id, meta) {
+      const playlist = store.getPlaylist(id);
+      if (!playlist) return false;
+      const fields = ['source', 'spotifyId', 'spotifyUrl', 'description', 'owner', 'importedAt'];
+      fields.forEach((key) => {
+        if (meta && meta[key] != null) playlist[key] = meta[key];
+        else delete playlist[key];
+      });
       save();
       return true;
     },

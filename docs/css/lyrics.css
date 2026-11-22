@@ -1,0 +1,352 @@
+/* ============================================================
+   musicVer · interactive synced lyrics
+   Immersive, movement-free blur-in view. The active line is full
+   size; surrounding lines shrink and tilt through a perspective
+   "fish eye" tunnel so depth follows the music.
+   ============================================================ */
+
+.lyrics-view {
+  --lyrics-accent: #8b6cff;
+  --lyrics-ease: linear;
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: calc(22px + env(safe-area-inset-top, 0px)) clamp(18px, 5vw, 64px)
+    calc(20px + env(safe-area-inset-bottom, 0px));
+  color: #fff;
+  background: #100e15;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(1.015);
+  transition: opacity .3s ease, transform .3s var(--ease-out, ease), visibility .3s ease;
+}
+
+.lyrics-view.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+}
+
+.lyrics-bg,
+.lyrics-veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.lyrics-bg {
+  background-position: center;
+  background-size: cover;
+  filter: blur(72px) saturate(160%) brightness(.48);
+  transform: scale(1.25);
+  opacity: .9;
+}
+
+.lyrics-veil {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(18, 16, 24, .08), rgba(9, 8, 13, .88) 74%),
+    linear-gradient(to bottom, rgba(9, 8, 13, .42), transparent 28%, transparent 72%, rgba(9, 8, 13, .7));
+}
+
+.lyrics-head,
+.lyrics-stage,
+.lyrics-foot {
+  position: relative;
+  z-index: 2;
+}
+
+.lyrics-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lyrics-kicker {
+  margin: 0 0 6px;
+  font: 700 9px/1 var(--font-ui, inherit);
+  letter-spacing: .26em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .58);
+  color: color-mix(in srgb, var(--lyrics-accent) 62%, white);
+}
+
+.lyrics-title {
+  margin: 0;
+  font: 600 clamp(18px, 2.2vw, 26px)/1.15 var(--font-display, Georgia, serif);
+  letter-spacing: -.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lyrics-artist {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, .58);
+}
+
+.lyrics-close {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .08);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+
+.lyrics-close:hover {
+  background: rgba(255, 255, 255, .2);
+  transform: rotate(90deg);
+}
+
+.lyrics-stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+
+.lyrics-scroll {
+  width: min(760px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 2.6vh, 30px);
+  padding: 0 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+}
+
+.lyrics-scroll::before,
+.lyrics-scroll::after {
+  content: "";
+  flex: 0 0 42vh;
+}
+
+.lyrics-scroll::-webkit-scrollbar { display: none; }
+
+.lyric-line {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: #fff;
+  max-width: 100%;
+  text-align: center;
+  font: 600 clamp(26px, 4vw, 46px)/1.28 var(--font-display, Georgia, serif);
+  letter-spacing: -.01em;
+  text-wrap: balance;
+  opacity: var(--lyric-opacity, .35);
+  filter: blur(var(--lyric-blur, 0px));
+  transform: perspective(760px) rotateX(var(--lyric-tilt, 0deg)) scale(var(--lyric-scale, 1));
+  transform-origin: center center;
+  transition:
+    opacity var(--lyrics-morph, .26s) var(--lyrics-ease),
+    filter var(--lyrics-morph, .26s) var(--lyrics-ease),
+    transform var(--lyrics-morph, .26s) var(--lyrics-ease),
+    color .25s ease;
+  will-change: transform, filter, opacity;
+  text-shadow: 0 10px 34px rgba(0, 0, 0, .6);
+}
+
+.lyric-line.is-past { color: rgba(255, 255, 255, .86); }
+
+.lyric-line.is-active {
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 0 34px rgba(160, 130, 255, .55), 0 12px 42px rgba(0, 0, 0, .66);
+  text-shadow:
+    0 0 34px color-mix(in srgb, var(--lyrics-accent) 55%, transparent),
+    0 12px 42px rgba(0, 0, 0, .66);
+}
+
+.lyric-line:hover {
+  opacity: .92 !important;
+  filter: blur(0) !important;
+}
+
+.lyrics-empty {
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, .6);
+  text-align: center;
+}
+
+.lyrics-foot {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+.lyrics-source {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: rgba(255, 255, 255, .48);
+  text-align: center;
+}
+
+.lyrics-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  font-size: 10px;
+  color: rgba(255, 255, 255, .62);
+}
+
+.lyrics-progress__bar {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .2);
+  cursor: pointer;
+}
+
+.lyrics-progress__bar > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--lyrics-accent);
+}
+
+.lyrics-progress__bar i {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 11px;
+  height: 11px;
+  margin: -5.5px 0 0 -5.5px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+
+.lyrics-progress__bar:hover i { opacity: 1; }
+
+.lyrics-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+}
+
+.lyrics-controls button {
+  color: rgba(255, 255, 255, .78);
+  font-size: 20px;
+  transition: transform .22s var(--ease-out, ease), color .2s ease;
+}
+
+.lyrics-controls button:hover { transform: scale(1.14); color: #fff; }
+
+.lyrics-play {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #fff;
+  color: #14121a !important;
+  font-size: 18px !important;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .36);
+}
+
+.flow-lyrics-open {
+  display: flex;
+  width: fit-content;
+  margin: 12px auto 0;
+  padding: 8px 15px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  color: rgba(255, 255, 255, .86);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease;
+}
+
+.flow-lyrics-open:hover {
+  background: var(--lyrics-accent, var(--accent, #8b6cff));
+  color: #14121a;
+}
+
+/* Microphone control in the player. The small bars dance only while the
+   current track is playing, so the button always signals the lyrics view. */
+.control--lyrics {
+  display: grid;
+  place-items: center;
+}
+
+.control--lyrics svg {
+  width: 19px;
+  height: 19px;
+  overflow: visible;
+}
+
+.control--lyrics .mic-wave {
+  fill: currentColor;
+  stroke: none;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.control--lyrics.is-active {
+  color: var(--lyrics-accent, var(--accent, #8b6cff));
+}
+
+.control--lyrics.is-playing .mic-wave {
+  animation: mic-wave-pulse .72s ease-in-out infinite alternate;
+}
+
+.control--lyrics.is-playing .mic-wave--2 { animation-delay: -.24s; }
+.control--lyrics.is-playing .mic-wave--3 { animation-delay: -.48s; }
+
+@keyframes mic-wave-pulse {
+  from { transform: scaleY(.35); opacity: .5; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@media (max-width: 720px) {
+  .lyrics-view { gap: 8px; padding-left: 18px; padding-right: 18px; }
+  .lyrics-title { font-size: 18px; }
+  .lyrics-scroll { gap: 18px; }
+  .lyrics-scroll::before,
+  .lyrics-scroll::after { flex-basis: 40vh; }
+  .lyric-line { font-size: clamp(24px, 7vw, 34px); }
+  .lyrics-close { width: 38px; height: 38px; }
+  .lyrics-controls { gap: 22px; }
+  .lyrics-play { width: 48px; height: 48px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-view,
+  .lyric-line,
+  .lyrics-close,
+  .lyrics-progress__bar i { transition: none; }
+  .control--lyrics.is-playing .mic-wave { animation: none; }
+}
