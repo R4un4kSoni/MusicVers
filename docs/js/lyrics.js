@@ -337,6 +337,7 @@
     if (!view) return;
     view.classList.add('is-open');
     view.setAttribute('aria-hidden', 'false');
+    view.inert = false;
     const snap = MV.player.snapshot();
     applyTrack(snap.current);
     sync(snap, true);
@@ -346,8 +347,11 @@
 
   function close() {
     if (!view) return;
+    // Keep focus out of the subtree before aria-hidden is applied.
+    if (MV.ui && MV.ui.releaseFocus) MV.ui.releaseFocus(view, '#flow-lyrics-open, #top-flow');
     view.classList.remove('is-open');
     view.setAttribute('aria-hidden', 'true');
+    view.inert = true;
     updateMic();
   }
 
@@ -383,6 +387,7 @@
 
     view = document.getElementById('lyrics-view');
     if (!view) return;
+    view.inert = !view.classList.contains('is-open');
     linesRoot = document.getElementById('lyrics-lines');
     titleNode = document.getElementById('lyrics-title');
     artistNode = document.getElementById('lyrics-artist');

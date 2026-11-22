@@ -37,6 +37,7 @@
 
   let lastPlaylistError = '';
   let lastPlaylistStatus = 0;
+  let lastCatalogError = '';
 
   let accessToken = '';
   let refreshToken = '';
@@ -432,7 +433,7 @@
       description: String(raw.description || ''),
       cover: cover,
       image: cover,
-      trackCount: Number(raw.tracks && raw.tracks.total) || 0,
+      trackCount: Number((raw.items && raw.items.total) || (raw.tracks && raw.tracks.total)) || 0,
       owner: String((raw.owner && (raw.owner.display_name || raw.owner.id)) || ''),
       public: Boolean(raw.public),
       spotifyId: rawId,
@@ -497,8 +498,10 @@
     let fallback = empty;
     try {
       for (const needle of queries) {
+        // Spotify caps search at 10 results per type; anything larger is a
+        // 400 Bad Request, which made every catalogue search silently fail.
         const data = await api('/search?q=' + encodeURIComponent(needle) +
-          '&type=track,album,artist&limit=24');
+          '&type=track,album,artist&limit=10');
         if (!data) continue;
         const result = normalizeSearchData(data);
         if (!hasResults(fallback)) fallback = result;
@@ -572,15 +575,21 @@
   }
 
   async function userPlaylists() {
-    if (!hasPlaylistScope() || !(await ensureToken())) return [];
+    lastCatalogError = '';
+    if (!hasPlaylistScope() || !(await ensureToken())) {
+      lastCatalogError = 'Connect Spotify with playlist access enabled.';
+      return [];
+    }
     try {
+      // `tracks(total)` is deprecated; current responses expose `items(total)`.
       const fields = [
         'next',
-        'items(id,name,description,images,tracks(total),owner(display_name,id),public,external_urls)'
+        'items(id,name,description,images,items(total),owner(display_name,id),public,external_urls)'
       ].join(',');
       const raw = await apiPaged('/me/playlists?limit=50&fields=' + encodeURIComponent(fields), 200);
       return raw.map(toPlaylistRaw).filter(Boolean);
     } catch (error) {
+      lastCatalogError = error.message || 'Spotify playlists could not be loaded.';
       return [];
     }
   }
@@ -623,29 +632,19 @@
         'album(id,name,images,album_type,release_date),',
         'duration_ms,external_ids,external_urls,is_local))'
       ].join('');
+      // Playlist items allow at most 50 per page; 100 is a 400, which used
+      // to push the import into the deprecated /tracks endpoint and fail.
+      // /playlists/{id}/items is the current endpoint and handles both
+      // `item` and the old `track` field inside normalizePlaylistTracks().
       const raw = await apiPaged(
-        '/playlists/' + encodeURIComponent(rawId) + '/items?limit=100&fields=' + encodeURIComponent(fields),
+        '/playlists/' + encodeURIComponent(rawId) + '/items?limit=50&fields=' + encodeURIComponent(fields),
         size
       );
-      const tracks = normalizePlaylistTracks(raw);
-      if (tracks.length) return tracks;
-
-      // Older Spotify responses and some app versions still expose `track`.
-      const legacyFields = [
-        'next',
-        'items(added_at,is_local,track(id,name,type,artists,',
-        'album(id,name,images,album_type,release_date),',
-        'duration_ms,external_ids,external_urls,is_local))'
-      ].join('');
-      const legacy = await apiPaged(
-        '/playlists/' + encodeURIComponent(rawId) + '/tracks?limit=100&fields=' + encodeURIComponent(legacyFields),
-        size
-      );
-      return normalizePlaylistTracks(legacy);
+      return normalizePlaylistTracks(raw);
     } catch (error) {
       lastPlaylistStatus = Number(error.status) || 0;
       lastPlaylistError = lastPlaylistStatus === 403
-        ? 'Spotify only allows reading playlists you own or collaborate on. Save a copy in Spotify, then import that copy.'
+        ? 'Spotify only allows reading playlists you own or collaborate on. Duplicate that playlist in Spotify, then import your copy.'
         : (error.message || 'Spotify could not read that playlist.');
       return [];
     }
@@ -894,8 +893,12 @@
 
   function setClientId(value) {
     const id = String(value || '').trim();
+    const previous = clientId();
     if (!id) write(CLIENT_KEY, null);
     else write(CLIENT_KEY, id);
+    // Tokens belong to the app that issued them. Keeping old tokens after a
+    // Client ID change produces failed refreshes and a broken import picker.
+    if (id !== previous) disconnect();
     clearCache();
     emitStatus();
     return status();
@@ -952,6 +955,7 @@
     lastError: lastError,
     lastPlaylistError: () => lastPlaylistError,
     lastPlaylistStatus: () => lastPlaylistStatus,
+    lastCatalogError: () => lastCatalogError,
     handleCallback: handleCallback,
     isIndianQuery: isIndianQuery,
     trackDupeKey: trackDupeKey,

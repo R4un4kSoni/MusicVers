@@ -117,16 +117,22 @@ Never point it at an open or unrestricted image proxy.
 ## Spotify playlist import
 
 Account → **SPOTIFY CATALOGUE → Import a playlist** lists the signed-in user's
-Spotify playlists and copies the chosen playlist into the local Library. The
-browser PKCE sign-in now asks for `playlist-read-private` and
+Spotify playlists and copies the chosen playlist into the local Library. First
+create an app in the Spotify Developer Dashboard, paste its Client ID into
+**SPOTIFY CATALOGUE**, and register the exact redirect URI shown below the field
+(including the trailing slash) in that app's Redirect URIs settings. The app must
+run on HTTPS or `127.0.0.1`; `localhost` and opening `index.html` directly are
+not valid redirect URIs.
+
+The browser PKCE sign-in asks for `playlist-read-private` and
 `playlist-read-collaborative`; playlists need this extra permission, so an older
 Spotify connection must be reconnected once. Only names, covers and track
 metadata are stored locally (no client secret and no Spotify audio). Imported
 tracks are still matched to full-length JioSaavn streams at play time, and
 Apple/Spotify 30-second previews are never used. After the reconnect, the import
 picker reopens automatically. Spotify only allows reading the items of playlists
-you own or collaborate on, so make a copy of any followed playlist before
-importing it.
+you own or collaborate on, so duplicate any followed playlist in Spotify before
+importing your copy.
 
 ## Browser support
 

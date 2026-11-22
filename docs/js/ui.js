@@ -1432,7 +1432,9 @@
         MV.spotify.userPlaylists().then((playlists) => {
           if (!root.isConnected) return;
           if (!playlists.length) {
-            list.innerHTML = '<p class="field-note">No playlists were returned. Reconnect with playlist access enabled, or add a playlist in Spotify first.</p>';
+            const reason = MV.spotify.lastCatalogError && MV.spotify.lastCatalogError();
+            list.innerHTML = '<p class="field-note">' + esc(reason ||
+              'No playlists were returned. Reconnect with playlist access enabled, or add a playlist in Spotify first.') + '</p>';
             return;
           }
           list.innerHTML = playlists.map((playlist, index) => {
@@ -1497,9 +1499,10 @@
               }, 420);
             };
           });
-        }).catch(() => {
+        }).catch((error) => {
           if (!root.isConnected) return;
-          list.innerHTML = '<p class="field-note">Spotify playlists could not be loaded. Reconnect and try again.</p>';
+          list.innerHTML = '<p class="field-note">' + esc((error && error.message) ||
+            'Spotify playlists could not be loaded. Reconnect and try again.') + '</p>';
         });
       }
     );
@@ -2073,17 +2076,38 @@
 
   function openFlow() {
     if (!MV.player.state.current) { toast('Play a song to enter Flow State.'); return; }
-    el('flow').classList.add('is-open');
-    el('flow').setAttribute('aria-hidden', 'false');
+    const flow = el('flow');
+    flow.classList.add('is-open');
+    flow.setAttribute('aria-hidden', 'false');
+    flow.inert = false;
     renderFlow(MV.player.snapshot());
   }
 
   function closeFlow() {
-    el('flow').classList.remove('is-open');
-    el('flow').setAttribute('aria-hidden', 'true');
+    const flow = el('flow');
+    releaseFocus(flow, '#top-flow');
+    flow.classList.remove('is-open');
+    flow.setAttribute('aria-hidden', 'true');
+    flow.inert = true;
   }
 
   /* ---------------- navigation ---------------- */
+
+  // Chrome blocks aria-hidden on a subtree that still owns focus. Move focus
+  // to a visible opener, then blur as a last resort, before hiding a panel.
+  function releaseFocus(container, fallbackSelector) {
+    if (!container) return;
+    const active = document.activeElement;
+    if (!active || !container.contains(active)) return;
+    let target = null;
+    if (fallbackSelector) {
+      try { target = document.querySelector(fallbackSelector); } catch (error) { /* selector is optional */ }
+    }
+    if (target && !container.contains(target) && typeof target.focus === 'function') {
+      target.focus({ preventScroll: true });
+    }
+    if (container.contains(document.activeElement) && typeof active.blur === 'function') active.blur();
+  }
 
   function blurIn(node) {
     if (!node || !node.classList) return;
@@ -2097,16 +2121,34 @@
     }, 260);
   }
 
+  // Slide the compact bottom-nav pill to the active tab. Mobile switches
+  // animate this pill only; the page content itself does not blur or slide.
+  function syncMobileNavIndicator() {
+    const nav = document.querySelector('.mobile-nav');
+    const indicator = nav && nav.querySelector('.mobile-nav__indicator');
+    if (!nav || !indicator || getComputedStyle(nav).display === 'none') return;
+    const active = nav.querySelector('.mobile-tab.is-active');
+    if (!active) return;
+    const navRect = nav.getBoundingClientRect();
+    const rect = active.getBoundingClientRect();
+    if (!navRect.width || !rect.width) return;
+    const width = Math.min(Math.max(rect.width - 12, 28), 52);
+    indicator.style.width = width + 'px';
+    indicator.style.transform = 'translateX(' + (rect.left - navRect.left + (rect.width - width) / 2) + 'px)';
+  }
+
   function navigate(page) {
     const names = { home: 'HOME', library: 'LIBRARY', discover: 'DISCOVER', stats: 'LISTENING STATS', account: 'ACCOUNT', advanced: 'ADVANCE SETTINGS', playlist: 'YOUR PLAYLIST', album: 'ALBUM', artist: 'ARTIST', report: 'REPORT' };
     const targetSection = document.querySelector('#page-' + page);
+    const compact = window.matchMedia('(max-width: 820px)').matches;
     if (targetSection) {
       document.querySelectorAll('.page').forEach((section) =>
         section.classList.toggle('is-active', section === targetSection));
-      blurIn(targetSection);
+      if (!compact) blurIn(targetSection);
     }
     document.querySelectorAll('.island-tab').forEach((tab) =>
       tab.classList.toggle('is-active', tab.dataset.nav === page));
+    syncMobileNavIndicator();
     el('crumb').textContent = names[page] || String(page).toUpperCase();
     document.querySelector('.stage').scrollTop = 0;
     const pages = document.querySelector('.pages');
@@ -2135,6 +2177,7 @@
     if (!drawer) return;
     drawer.hidden = false;
     drawer.setAttribute('aria-hidden', 'false');
+    drawer.inert = false;
     renderQueue(MV.player.snapshot());
   }
 
@@ -2142,12 +2185,10 @@
     const drawer = el('queue-drawer');
     if (!drawer) return;
     // Move focus out before hiding so aria-hidden never covers a live control.
-    if (drawer.contains(document.activeElement)) {
-      const opener = el('queue-toggle') || el('flow-queue');
-      if (opener) opener.focus();
-    }
+    releaseFocus(drawer, '#queue-toggle, #flow-queue');
     drawer.hidden = true;
     drawer.setAttribute('aria-hidden', 'true');
+    drawer.inert = true;
   }
 
   function toggleQueue(force) {
@@ -3124,6 +3165,9 @@
     const heroOffset = D.heroes.length ? (MV.homeRefreshId - 1) % D.heroes.length : 0;
     MV.homeHeroes = D.heroes.map((_, index) => D.heroes[(index + heroOffset) % D.heroes.length]);
     initImageFallbacks();
+    // Hidden overlays must not be reachable by Tab before their first open.
+    if (el('flow')) el('flow').inert = true;
+    if (el('queue-drawer')) el('queue-drawer').inert = true;
     initIsland();
     initSeeking();
     initTilt();
@@ -3142,7 +3186,11 @@
     renderGenres();
     renderAll();
     renderRecentSearches();
-    blurIn(document.querySelector('.page.is-active'));
+    if (!window.matchMedia('(max-width: 820px)').matches) {
+      blurIn(document.querySelector('.page.is-active'));
+    }
+    syncMobileNavIndicator();
+    window.addEventListener('resize', syncMobileNavIndicator, { passive: true });
     document.addEventListener('mv:player', (event) => updatePlayer(event.detail));
     document.addEventListener('mv:store', (event) => {
       // Likes update hearts in place so the sparkle animation is not wiped
@@ -3187,6 +3235,6 @@
     openQueue, closeQueue, toggleQueue, applyTheme, setThemeWithAnimation, toggleTheme,
     openCreatePlaylist, songMenu, addToPlaylistModal, coverPicker,
     runSearch, setHero, toast, loadImageFile, readCoverFile, openImageCropper, fmt, esc,
-    renderSpotifyShelf, renderAllSpotifyShelves, openSpotifyImportModal
+    renderSpotifyShelf, renderAllSpotifyShelves, openSpotifyImportModal, releaseFocus
   };
 })(window.MV = window.MV || {});
