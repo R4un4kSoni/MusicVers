@@ -75,22 +75,22 @@ contain only the bundled demo catalogue and no personal library data.
 
 <table>
   <tr>
-    <td align="center"><a href="docs/screenshots/01-home.webp"><img src="docs/screenshots/01-home.webp" width="360" alt="musicVer home page"></a><br><b>Home</b></td>
-    <td align="center"><a href="docs/screenshots/02-home-shelves.webp"><img src="docs/screenshots/02-home-shelves.webp" width="360" alt="Home shelves"></a><br><b>Horizontal shelves</b></td>
-    <td align="center"><a href="docs/screenshots/03-discover.webp"><img src="docs/screenshots/03-discover.webp" width="360" alt="Discover search results"></a><br><b>Discover</b></td>
+    <td align="center"><a href="docs/screenshots/01-home.webp"><img src="docs/screenshots/01-home.png" width="360" alt="musicVer home page"></a><br><b>Home</b></td>
+    <td align="center"><a href="docs/screenshots/02-home-shelves.webp"><img src="docs/screenshots/02-home-shelves.png" width="360" alt="Home shelves"></a><br><b>Horizontal shelves</b></td>
+    <td align="center"><a href="docs/screenshots/03-discover.webp"><img src="docs/screenshots/03-discover.png" width="360" alt="Discover search results"></a><br><b>Discover</b></td>
   </tr>
   <tr>
-    <td align="center"><a href="docs/screenshots/04-artist.webp"><img src="docs/screenshots/04-artist.webp" width="360" alt="Artist profile"></a><br><b>Artist profile</b></td>
-    <td align="center"><a href="docs/screenshots/05-album.webp"><img src="docs/screenshots/05-album.webp" width="360" alt="Album overview"></a><br><b>Album overview</b></td>
-    <td align="center"><a href="docs/screenshots/06-library.webp"><img src="docs/screenshots/06-library.webp" width="360" alt="Library"></a><br><b>Library</b></td>
+    <td align="center"><a href="docs/screenshots/04-artist.webp"><img src="docs/screenshots/04-artist.png" width="360" alt="Artist profile"></a><br><b>Artist profile</b></td>
+    <td align="center"><a href="docs/screenshots/05-album.webp"><img src="docs/screenshots/05-album.png" width="360" alt="Album overview"></a><br><b>Album overview</b></td>
+    <td align="center"><a href="docs/screenshots/06-library.webp"><img src="docs/screenshots/06-library.png" width="360" alt="Library"></a><br><b>Library</b></td>
   </tr>
   <tr>
-    <td align="center"><a href="docs/screenshots/07-account.webp"><img src="docs/screenshots/07-account.webp" width="360" alt="Account page"></a><br><b>Account</b></td>
+    <td align="center"><a href="docs/screenshots/07-account.webp"><img src="docs/screenshots/07-account.png" width="360" alt="Account page"></a><br><b>Account</b></td>
     <td align="center"><a href="docs/screenshots/10-island.webp"><img src="docs/screenshots/10-island.webp" width="360" alt="Dynamic island menu"></a><br><b>Dynamic island</b></td>
     <td align="center"><a href="docs/screenshots/11-queue.webp"><img src="docs/screenshots/11-queue.webp" width="360" alt="Queue drawer"></a><br><b>Queue drawer</b></td>
   </tr>
   <tr>
-    <td align="center"><a href="docs/screenshots/08-flow.webp"><img src="docs/screenshots/08-flow.webp" width="360" alt="Flow State"></a><br><b>Flow State</b></td>
+    <td align="center"><a href="docs/screenshots/08-flow.webp"><img src="docs/screenshots/08-flow.png" width="360" alt="Flow State"></a><br><b>Flow State</b></td>
     <td align="center"><a href="docs/screenshots/09-dark-home.webp"><img src="docs/screenshots/09-dark-home.webp" width="360" alt="Dark mode home"></a><br><b>Dark mode</b></td>
     <td align="center"></td>
   </tr>
@@ -284,8 +284,11 @@ The bottom player supports:
 - like, more options and add to queue;
 - a glass **Queue** drawer with now-playing art, animated levels, track
   numbers, durations and a reliable close button;
-- double-clicking the player, or using the expand button, to enter **Flow
-  State**, a full-screen immersive now-playing view.
+- double-clicking the player, or using the top menu, to enter **Flow State**, a
+  full-screen immersive now-playing view;
+- a **microphone** button that opens interactive synced lyrics, with the active
+  line large and sharp and the surrounding lines smaller, tilted and blurred;
+  tapping a line seeks to that moment.
 
 Playback state is snapshotted from the Python player (`current`, `queue`,
 `index`, `playing`, `elapsed`, `duration`, `volume`, `shuffle`, `repeat`) and
