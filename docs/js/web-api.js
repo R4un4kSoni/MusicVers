@@ -994,6 +994,85 @@
 
   function apiFetch(path) { return fetchJson(apiBase, path); }
 
+  /* Artist profiles are thin on the default Jio mirror: some artists resolve
+     with zero albums/singles there while the secondary API still has the full
+     release lists. Try every known host and merge the list sections. */
+  function artistApiBases() {
+    const bases = [apiBase];
+    JIO_LIVE_APIS.forEach((base) => {
+      if (bases.indexOf(base) < 0) bases.push(base);
+    });
+    return bases;
+  }
+
+  function artistList(data, key) {
+    return data && data.data && Array.isArray(data.data[key]) ? data.data[key] : [];
+  }
+
+  function artistPayloadScore(data) {
+    if (!data || !data.data) return -1;
+    const bio = data.data.bio;
+    const bioLength = Array.isArray(bio) ? bio.length : String(bio || '').length;
+    return artistList(data, 'topAlbums').length * 3 +
+      artistList(data, 'singles').length * 2 +
+      artistList(data, 'topSongs').length +
+      artistList(data, 'songs').length +
+      artistList(data, 'similarArtists').length +
+      (bioLength ? 2 : 0);
+  }
+
+  async function artistResponses(path) {
+    const bases = artistApiBases();
+    const responses = [];
+    let lastError = null;
+    for (let index = 0; index < bases.length; index += 1) {
+      try {
+        const data = await fetchJson(bases[index], path);
+        if (data && data.data) responses.push(data);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (!responses.length && lastError) throw lastError;
+    return responses;
+  }
+
+  function mergeArtistOverview(responses) {
+    const ranked = responses.slice().sort((a, b) => artistPayloadScore(b) - artistPayloadScore(a));
+    const merged = { success: true, data: Object.assign({}, ranked[0].data) };
+    ['bio', 'url', 'name', 'id', 'image', 'followerCount', 'isVerified', 'dominantLanguage'].forEach((key) => {
+      if (merged.data[key]) return;
+      const donor = responses.find((response) => response && response.data && response.data[key]);
+      if (donor) merged.data[key] = donor.data[key];
+    });
+    ['topAlbums', 'singles', 'topSongs', 'similarArtists', 'songs', 'playlists'].forEach((key) => {
+      const seen = new Set();
+      const list = [];
+      responses.forEach((response) => {
+        artistList(response, key).forEach((item) => {
+          const id = String((item && (item.id || item.title || item.name || item.url || item.videoId)) || '');
+          if (!id || seen.has(id)) return;
+          seen.add(id);
+          list.push(item);
+        });
+      });
+      if (list.length || merged.data[key]) merged.data[key] = list;
+    });
+    return merged;
+  }
+
+  async function artistOverview(path) {
+    const responses = await artistResponses(path);
+    return responses.length ? mergeArtistOverview(responses) : null;
+  }
+
+  async function artistSongs(path) {
+    const responses = await artistResponses(path);
+    if (!responses.length) return null;
+    return responses.slice().sort((a, b) =>
+      artistList(b, 'songs').length - artistList(a, 'songs').length)[0];
+  }
+
   /* Apple's Search API does not send CORS headers to GitHub Pages, so a plain
      fetch() always fails in the browser. JSONP is the officially supported
      browser form of this endpoint. Requests are cached and lightly throttled
@@ -1680,28 +1759,25 @@
       const artistId = encodeURIComponent(id);
       try {
         if (section === 'songs') {
-          const data = await apiFetch('/artists/' + artistId + '/songs?page=' + (Number(page) + 1));
-          const songs = mapToJioFull(
-            (data && data.data && Array.isArray(data.data.songs) ? data.data.songs : [])
-              .map(toTrackRaw).filter(Boolean)
-          );
+          const data = await artistSongs('/artists/' + artistId + '/songs?page=' + (Number(page) + 1));
+          const songs = mapToJioFull(artistList(data, 'songs').map(toTrackRaw).filter(Boolean));
           rememberStreams(songs.slice(0, 40));
           return { success: true, songs: songs };
         }
-        const data = await apiFetch('/artists/' + artistId);
+        const data = await artistOverview('/artists/' + artistId);
         const artist = data && data.data ? data.data : {};
         const bio = Array.isArray(artist.bio)
           ? artist.bio.map((item) => item && item.text ? item.text : '').join(' ')
           : String(artist.bio || '');
-        const songs = mapToJioFull((artist.topSongs || []).map(toTrackRaw).filter(Boolean));
+        const songs = mapToJioFull(artistList(data, 'topSongs').map(toTrackRaw).filter(Boolean));
         rememberStreams(songs.slice(0, 40));
         return {
           success: true,
           artist: toArtistRaw(artist),
           songs: songs,
-          albums: (artist.topAlbums || []).map(toAlbumRaw).filter(Boolean),
-          singles: (artist.singles || []).map(toAlbumRaw).filter(Boolean),
-          similar_artists: (artist.similarArtists || []).map(toArtistRaw).filter(Boolean),
+          albums: artistList(data, 'topAlbums').map(toAlbumRaw).filter(Boolean),
+          singles: artistList(data, 'singles').map(toAlbumRaw).filter(Boolean),
+          similar_artists: artistList(data, 'similarArtists').map(toArtistRaw).filter(Boolean),
           playlists: [],
           bio: bio,
           source_url: artist.url || ''
