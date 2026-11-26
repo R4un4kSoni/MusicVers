@@ -14,12 +14,12 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=1175">
-  <link rel="stylesheet" href="css/layout.css?v=1175">
-  <link rel="stylesheet" href="css/components.css?v=1114">
-  <link rel="stylesheet" href="css/web.css?v=1175">
-  <link rel="stylesheet" href="css/mobile-redesign.css?v=1175">
-  <link rel="stylesheet" href="css/lyrics.css?v=1175">
+  <link rel="stylesheet" href="css/base.css?v=1181">
+  <link rel="stylesheet" href="css/layout.css?v=1181">
+  <link rel="stylesheet" href="css/components.css?v=1181">
+  <link rel="stylesheet" href="css/web.css?v=1181">
+  <link rel="stylesheet" href="css/mobile-redesign.css?v=1181">
+  <link rel="stylesheet" href="css/lyrics.css?v=1181">
 </head>
 
 <body>
@@ -35,7 +35,7 @@
     <span class="beta-notice__tag">V-BETA</span>
     <strong class="beta-notice__title">This web version is still being finished.</strong>
     <span class="beta-notice__text">Thanks for testing MusicVer. Some parts may still change.</span>
-    <button class="beta-notice__close" id="beta-notice-close" aria-label="Dismiss notice" title="Dismiss notice">×</button>
+    <button class="beta-notice__close" id="beta-notice-close" aria-label="Dismiss notice" title="Dismiss notice"><span class="app-icon app-icon--cross-circle" aria-hidden="true"></span></button>
   </div>
 
   <div class="app" id="app">
@@ -44,11 +44,7 @@
     <div class="edge-sensor" aria-hidden="true"></div>
     <aside class="island" id="island" aria-label="musicVer navigation">
       <button class="island-pearl" id="island-pearl" aria-label="Open musicVer navigation" aria-expanded="false">
-        <svg viewBox="0 0 40 40" aria-hidden="true">
-          <path d="M8 27c4-1 6-4 6-9 0-4 2-7 6-8" />
-          <path d="M6 21c5-1 8-5 8-11" />
-          <circle cx="27" cy="26" r="5" />
-        </svg>
+        <span class="app-icon app-icon--island-icon" aria-hidden="true"></span>
         <span class="pearl-pulse"></span>
       </button>
 
@@ -56,13 +52,12 @@
         <span class="island-glow island-glow--blue" aria-hidden="true"></span>
         <span class="island-glow island-glow--red" aria-hidden="true"></span>
         <div class="island-brand">
-          <span class="island-brand__mark">◈</span>
-          <span>musicVer</span>
+          <span class="island-brand__mark"></span>
         </div>
         <nav class="island-nav" aria-label="Main menu">
           <button class="island-tab is-active" data-nav="home" title="Home">
             <span class="island-tab__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.8l8.5 6.7V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z" /></svg>
+              <span class="app-icon app-icon--home" aria-hidden="true"></span>
             </span>
             <span class="island-tab__label">Home</span>
           </button>
@@ -91,7 +86,7 @@
             <span class="island-tab__label">Account</span>
           </button>
         </nav>
-        <div class="island-hint">MOVE TO THE EDGE</div>
+        <div style="font-size: medium;" class="island-hint">New way to <span style="color: #B56C74;">GO</span></div>
       </div>
     </aside>
 
@@ -100,7 +95,7 @@
       <span class="mobile-nav__indicator" aria-hidden="true"></span>
       <button class="island-tab mobile-tab is-active" data-nav="home" aria-label="Home">
         <span class="island-tab__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M3.5 10.5 12 3.8l8.5 6.7V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z" /></svg>
+          <span class="app-icon app-icon--home" aria-hidden="true"></span>
         </span>
         <span class="island-tab__label">Home</span>
       </button>
@@ -151,7 +146,7 @@
                 <span class="top-menu__label">Dark mode</span>
               </button>
               <button class="top-menu__item" id="top-report" data-nav="report" role="menuitem" aria-label="Report an issue" title="Report an issue">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4.5h9l5 5V19a.5.5 0 0 1-.5.5h-13A.5.5 0 0 1 5 19z"/><path d="M14 4.5V10h5"/><path d="M8.5 13h7M8.5 16h4.5"/></svg>
+                <span class="app-icon app-icon--feedback" aria-hidden="true"></span>
                 <span>FeedBack</span>
               </button>
               <button class="top-menu__item" data-nav="account" role="menuitem" aria-label="Account" title="Account">
@@ -203,14 +198,14 @@
               <h2 id="hero-title">The sound of right now.</h2>
               <p class="hero-copy" id="hero-copy">Fresh from studios around the world.</p>
               <div class="hero-actions">
-                <button class="btn btn--cream" id="hero-play"><span class="btn__glyph">▶</span> Play feature</button>
+                <button class="btn btn--cream" id="hero-play"><span class="btn__glyph app-icon app-icon--play" aria-hidden="true"></span><span>Play feature</span></button>
                 <button class="btn btn--ghost-light" id="hero-save">＋ Save album</button>
               </div>
             </div>
             <div class="hero-controls">
-              <button class="hero-arrow" id="hero-prev" aria-label="Previous slide">‹</button>
+              <button class="hero-arrow" id="hero-prev" aria-label="Previous slide"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
               <div class="hero-dots" id="hero-dots"></div>
-              <button class="hero-arrow" id="hero-next" aria-label="Next slide">›</button>
+              <button class="hero-arrow" id="hero-next" aria-label="Next slide"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
             </div>
             <div class="hero-index" id="hero-index">01 / 04</div>
           </section>
@@ -244,7 +239,7 @@
               </div>
               <div class="shelf-tools">
                 <button class="link-btn" data-nav="library">Your library ↗</button>
-                <button class="rail-arrow" data-rail="recently-played" aria-label="Scroll recently played">›</button>
+                <button class="rail-arrow" data-rail="recently-played" aria-label="Scroll recently played"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
               </div>
             </div>
             <div class="rail rail--songs" id="recently-played"></div>
@@ -259,7 +254,7 @@
               <div class="shelf-tools">
                 <span class="live-tag"><i></i> LIVE CHART</span>
                 <button class="link-btn" data-action="open-trending-mix">Open chart ↗</button>
-                <button class="rail-arrow" data-rail="trending-now" aria-label="Scroll trending songs">›</button>
+                <button class="rail-arrow" data-rail="trending-now" aria-label="Scroll trending songs"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
               </div>
             </div>
             <div class="rail rail--songs" id="trending-now"></div>
@@ -273,7 +268,7 @@
               </div>
               <div class="shelf-tools">
                 <button class="link-btn" data-action="open-album-catalog">Album catalog ↗</button>
-                <button class="rail-arrow" data-rail="albums-all" aria-label="Scroll albums">›</button>
+                <button class="rail-arrow" data-rail="albums-all" aria-label="Scroll albums"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
               </div>
             </div>
             <div class="rail" id="albums-all"></div>
@@ -287,7 +282,7 @@
               </div>
               <div class="shelf-tools">
                 <button class="link-btn" data-action="open-language-mix" data-language="Hindi">Hindi mix ↗</button>
-                <button class="rail-arrow" data-rail="hindi-songs" aria-label="Scroll Hindi songs">›</button>
+                <button class="rail-arrow" data-rail="hindi-songs" aria-label="Scroll Hindi songs"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
               </div>
             </div>
             <div class="rail rail--songs" id="hindi-songs"></div>
@@ -301,7 +296,7 @@
               </div>
               <div class="shelf-tools">
                 <button class="link-btn" data-action="open-language-mix" data-language="English">English mix ↗</button>
-                <button class="rail-arrow" data-rail="english-songs" aria-label="Scroll English songs">›</button>
+                <button class="rail-arrow" data-rail="english-songs" aria-label="Scroll English songs"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
               </div>
             </div>
             <div class="rail rail--songs" id="english-songs"></div>
@@ -319,9 +314,9 @@
             <form class="search-bar" id="search-form" autocomplete="off">
               <svg class="search-bar__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>
               <input type="text" id="search-input" placeholder="Search music, artists, albums..." aria-label="Search songs, artists or albums">
-              <button type="button" class="search-bar__clear" id="search-clear" aria-label="Clear search" hidden>×</button>
+              <button type="button" class="search-bar__clear" id="search-clear" aria-label="Clear search" hidden><span class="app-icon app-icon--cross-circle" aria-hidden="true"></span></button>
               <button type="submit" class="search-bar__button">Search</button>
-              <button type="button" class="search-close" id="search-close" aria-label="Close search">×</button>
+              <button type="button" class="search-close" id="search-close" aria-label="Close search"><span class="app-icon app-icon--cross-circle" aria-hidden="true"></span></button>
               <div class="recent-popover" id="recent-searches" hidden></div>
             </form>
             <p class="search-hint">start search with Music Ablums and Artist Name</p>
@@ -460,7 +455,7 @@
               <span class="lib-tile__arrow">↗</span>
             </button>
             <button class="lib-tile lib-tile--saved" data-library-tab="saved">
-              <span class="lib-tile__icon">↓</span>
+              <span class="lib-tile__icon"><span class="app-icon app-icon--bookmark-before" aria-hidden="true"></span></span>
               <span class="lib-tile__copy"><strong>Saved</strong><small id="saved-count">0 albums</small></span>
               <span class="lib-tile__arrow">↗</span>
             </button>
@@ -478,7 +473,7 @@
               <button class="library-tab" data-library-tab="saved">Saved</button>
               <button class="library-tab" data-library-tab="local">Local songs</button>
             </div>
-            <button class="add-round" id="add-playlist" aria-label="Create playlist" title="Create a playlist">＋</button>
+            <button class="add-round" id="add-playlist" aria-label="Create playlist" title="Create a playlist"><span class="app-icon app-icon--plus-hexagon" aria-hidden="true"></span></button>
             <div class="library-panel" id="library-panel"></div>
             <section class="shelf recommend-shelf" id="shelf-spotify-library">
               <div class="shelf-head">
@@ -492,20 +487,20 @@
             </section>
           </div>
 
-          <footer class="page-foot">Tip · use the ↓ button on any album to save it here</footer>
+          <footer class="page-foot">Tip · use the bookmark button on any album to save it here</footer>
         </section>
 
         <!-- ---------------- PLAYLIST DETAIL ---------------- -->
         <section class="page" id="page-playlist" data-page="playlist">
           <div class="playlist-head">
-            <button class="back-btn" data-nav="library">← Library</button>
+            <button class="back-btn" data-nav="library"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span><span>Library</span></button>
             <div class="playlist-head__cover" id="playlist-head-cover">♪</div>
             <div class="playlist-head__copy">
               <p class="eyebrow">YOUR PLAYLIST</p>
               <h1 id="playlist-head-title">Playlist</h1>
               <p id="playlist-head-meta">0 songs</p>
               <div class="playlist-head__actions playlist-actions">
-                <button class="playlist-play-big" id="playlist-play" aria-label="Play playlist" title="Play playlist">▶</button>
+                <button class="playlist-play-big" id="playlist-play" aria-label="Play playlist" title="Play playlist"><span class="app-icon app-icon--play" aria-hidden="true"></span></button>
                 <button class="playlist-action playlist-action--add" id="playlist-add-songs" aria-label="Add songs" title="Add songs">+</button>
                 <button class="playlist-action playlist-action--more" id="playlist-more" aria-label="More playlist options" title="More options">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle cx="12" cy="19" r="1.6" /></svg>
@@ -533,7 +528,7 @@
 
         <!-- ---------------- ALBUM OVERVIEW ---------------- -->
         <section class="page" id="page-album" data-page="album">
-          <button class="back-btn" id="album-back">← Back</button>
+          <button class="back-btn" id="album-back"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span><span>Back</span></button>
           <div class="playlist-head">
             <div class="playlist-head__cover" id="album-head-cover">♪</div>
             <div class="playlist-head__copy">
@@ -541,8 +536,8 @@
               <h1 id="album-head-title">Album</h1>
               <p id="album-head-meta">0 songs</p>
               <div class="playlist-head__actions">
-                <button class="btn btn--icon btn--dark" id="album-play" aria-label="Play album" title="Play album"><span>▶</span></button>
-                <button class="btn btn--icon btn--outline" id="album-save" aria-label="Save album" title="Save album"><span>↓</span></button>
+                <button class="btn btn--icon btn--dark" id="album-play" aria-label="Play album" title="Play album"><span class="app-icon app-icon--play" aria-hidden="true"></span></button>
+                <button class="btn btn--icon btn--outline" id="album-save" aria-label="Save album" title="Save album"><span class="app-icon app-icon--bookmark-before" aria-hidden="true"></span></button>
               </div>
               <p class="album-note" id="album-note">Read-only collection · the title and cover come from the catalogue.</p>
             </div>
@@ -562,7 +557,7 @@
 
         <!-- ---------------- ARTIST DETAIL ---------------- -->
         <section class="page" id="page-artist" data-page="artist">
-          <button class="back-btn" data-nav="discover">← Back to search</button>
+          <button class="back-btn" data-nav="discover"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span><span>Back to search</span></button>
           <div class="artist-hero" id="artist-hero">
             <div class="artist-hero__placeholder">Loading artist…</div>
           </div>
@@ -573,7 +568,7 @@
                 <p class="eyebrow">THE ESSENTIALS</p>
                 <h2>Popular songs</h2>
               </div>
-              <button class="btn btn--dark" id="artist-play-all"><span>▶</span> Play all</button>
+              <button class="btn btn--dark" id="artist-play-all"><span class="app-icon app-icon--play" aria-hidden="true"></span><span>Play all</span></button>
             </div>
             <div class="song-list song-list--detail" id="artist-songs"></div>
             <button class="btn btn--outline load-more" id="artist-load-more" hidden>Load more songs ↓</button>
@@ -840,7 +835,7 @@
 
         <!-- ---------------- ADVANCE SETTINGS ---------------- -->
         <section class="page" id="page-advanced" data-page="advanced">
-          <button class="back-btn" data-nav="account">← Back to Account</button>
+          <button class="back-btn" data-nav="account"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span><span>Back to Account</span></button>
           <div class="page-intro page-intro--tight">
             <p class="eyebrow">FINE TUNING</p>
             <h1>Advance <em>settings.</em></h1>
@@ -872,12 +867,62 @@
                 <input type="checkbox" id="setting-crossfade-theme"><span class="switch"></span>
               </label>
             </div>
+
+            <div class="account-card account-card--equalizer">
+              <div class="equalizer-head">
+                <div>
+                  <p class="eyebrow">AUDIO</p>
+                  <h3>Equalizer</h3>
+                </div>
+                <label class="switch-row switch-row--compact" for="setting-eq-enabled">
+                  <input type="checkbox" id="setting-eq-enabled" aria-label="Enable equalizer">
+                  <span class="switch"></span>
+                </label>
+              </div>
+              <p class="field-note">Shape the sound with five bands. Your settings are saved on this device and apply while music plays.</p>
+              <div class="eq-toolbar">
+                <label class="field-label" for="setting-eq-preset">Preset</label>
+                <select id="setting-eq-preset" class="eq-select" aria-label="Equalizer preset">
+                  <option value="flat">Flat</option>
+                  <option value="bass">Bass boost</option>
+                  <option value="vocal">Vocal</option>
+                  <option value="treble">Treble boost</option>
+                  <option value="rock">Rock</option>
+                  <option value="jazz">Jazz</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <button type="button" class="eq-btn" id="setting-eq-reset">Reset</button>
+              </div>
+              <div class="eq-bands">
+                <div class="eq-band">
+                  <div class="eq-band__label"><label for="eq-band-0">60 Hz</label><span id="eq-value-0">0 dB</span></div>
+                  <input type="range" id="eq-band-0" min="-12" max="12" step="1" value="0" aria-label="60 Hz gain">
+                </div>
+                <div class="eq-band">
+                  <div class="eq-band__label"><label for="eq-band-1">250 Hz</label><span id="eq-value-1">0 dB</span></div>
+                  <input type="range" id="eq-band-1" min="-12" max="12" step="1" value="0" aria-label="250 Hz gain">
+                </div>
+                <div class="eq-band">
+                  <div class="eq-band__label"><label for="eq-band-2">1 kHz</label><span id="eq-value-2">0 dB</span></div>
+                  <input type="range" id="eq-band-2" min="-12" max="12" step="1" value="0" aria-label="1 kHz gain">
+                </div>
+                <div class="eq-band">
+                  <div class="eq-band__label"><label for="eq-band-3">4 kHz</label><span id="eq-value-3">0 dB</span></div>
+                  <input type="range" id="eq-band-3" min="-12" max="12" step="1" value="0" aria-label="4 kHz gain">
+                </div>
+                <div class="eq-band">
+                  <div class="eq-band__label"><label for="eq-band-4">12 kHz</label><span id="eq-value-4">0 dB</span></div>
+                  <input type="range" id="eq-band-4" min="-12" max="12" step="1" value="0" aria-label="12 kHz gain">
+                </div>
+              </div>
+              <p class="field-note eq-status" id="eq-status" aria-live="polite">Equalizer off · Flat</p>
+            </div>
           </div>
         </section>
 
         <!-- ---------------- LISTENING STATS / WRAPPED ---------------- -->
         <section class="page stats-page" id="page-stats" data-page="stats">
-          <button class="back-btn" data-nav="account">← Back to Account</button>
+          <button class="back-btn" data-nav="account"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span><span>Back to Account</span></button>
           <div class="wrapped-shell">
             <header class="wrapped-top">
               <div class="wrapped-brand"><span class="wrapped-brand__mark">◈</span> musicVer <span>WRAPPED</span></div>
@@ -885,7 +930,7 @@
             </header>
             <div class="wrapped-stage" id="wrapped-stage" aria-live="polite"></div>
             <footer class="wrapped-nav">
-              <button class="wrapped-btn wrapped-btn--ghost" id="wrapped-prev" aria-label="Previous slide">← Back</button>
+              <button class="wrapped-btn wrapped-btn--ghost" id="wrapped-prev" aria-label="Previous slide"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span><span>Back</span></button>
               <div class="wrapped-dots" id="wrapped-dots" aria-label="Story progress"></div>
               <button class="wrapped-btn" id="wrapped-next">Next →</button>
             </footer>
@@ -904,17 +949,17 @@
           <span id="player-artist">Choose a song to begin</span>
         </div>
         <button class="icon-toggle" id="player-like" aria-label="Like current song" aria-pressed="false">♡</button>
-        <button class="icon-toggle icon-toggle--save" id="player-save" aria-label="Save current album" aria-pressed="false">↓</button>
+        <button class="icon-toggle icon-toggle--save" id="player-save" aria-label="Save current album" aria-pressed="false"><span class="app-icon app-icon--bookmark-before" aria-hidden="true"></span></button>
       </div>
 
       <div class="player-center">
         <div class="player-controls">
-          <button class="control" id="shuffle" aria-label="Shuffle" title="Shuffle">⤨</button>
-          <button class="control" id="previous" aria-label="Previous" title="Previous">|‹</button>
-          <button class="play-main" id="main-play" aria-label="Play" title="Play / pause">▶</button>
-          <button class="control" id="next" aria-label="Next" title="Next">›|</button>
-          <button class="control control--add" id="player-add" aria-label="Add current song to playlist" title="Add current song to playlist">+</button>
-          <button class="control control--radio" id="player-radio" aria-label="Open song radio" title="Song radio">◈</button>
+          <button class="control" id="shuffle" aria-label="Shuffle" title="Shuffle"><span class="app-icon app-icon--shuffle" aria-hidden="true"></span></button>
+          <button class="control" id="previous" aria-label="Previous" title="Previous"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
+          <button class="play-main" id="main-play" aria-label="Play" title="Play / pause"><span class="app-icon app-icon--play" aria-hidden="true"></span></button>
+          <button class="control" id="next" aria-label="Next" title="Next"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
+          <button class="control control--add" id="player-add" aria-label="Add current song to playlist" title="Add current song to playlist"><span class="app-icon app-icon--plus-hexagon" aria-hidden="true"></span></button>
+          <button class="control control--radio" id="player-radio" aria-label="Open song radio" title="Song radio"><span class="app-icon app-icon--radio-alt" aria-hidden="true"></span></button>
         </div>
         <div class="seek-row">
           <span id="current-time">0:00</span>
@@ -928,17 +973,10 @@
 
       <div class="player-extra">
         <button class="control" id="queue-toggle" aria-label="Queue" title="Queue">☷</button>
-        <button class="control" id="volume-icon" aria-label="Mute" title="Mute">◖</button>
+        <button class="control" id="volume-icon" aria-label="Mute" title="Mute"><span class="app-icon app-icon--volume" aria-hidden="true"></span></button>
         <input type="range" id="volume" min="0" max="100" value="70" aria-label="Volume">
         <button class="control control--lyrics" id="lyrics-launch" aria-label="Lyrics" title="Lyrics" aria-pressed="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="7.5" y="2.5" width="6" height="10.5" rx="3"></rect>
-            <path d="M4.5 10a6 6 0 0 0 12 0"></path>
-            <path d="M10.5 16v4.5"></path>
-            <rect class="mic-wave mic-wave--1" x="15.4" y="11.5" width="1.6" height="5.5" rx=".8" stroke="none"></rect>
-            <rect class="mic-wave mic-wave--2" x="18.2" y="9.5" width="1.6" height="7.5" rx=".8" stroke="none"></rect>
-            <rect class="mic-wave mic-wave--3" x="21" y="12.5" width="1.6" height="4.5" rx=".8" stroke="none"></rect>
-          </svg>
+          <span class="app-icon app-icon--lyrics" aria-hidden="true"></span>
         </button>
       </div>
 
@@ -959,7 +997,7 @@
           <h2>Play queue</h2>
           <span class="queue-count" id="queue-count">0 songs</span>
         </div>
-        <button class="round-icon queue-close" id="queue-close" aria-label="Close queue" title="Close queue">×</button>
+        <button class="round-icon queue-close" id="queue-close" aria-label="Close queue" title="Close queue"><span class="app-icon app-icon--cross-circle" aria-hidden="true"></span></button>
       </div>
       <div class="queue-now" id="queue-now">
         <div class="queue-now__empty">Nothing playing yet</div>
@@ -971,9 +1009,9 @@
     <div class="flow" id="flow" aria-hidden="true">
       <div class="flow-bg" id="flow-bg"></div>
       <div class="flow-grain" aria-hidden="true"></div>
-      <button class="flow-close" id="flow-close" aria-label="Close Flow State">×</button>
+      <button class="flow-close" id="flow-close" aria-label="Close Flow State"><span class="app-icon app-icon--cross-circle" aria-hidden="true"></span></button>
       <div class="flow-topbar">
-        <button class="flow-back" id="flow-back" aria-label="Back from Flow State">←</button>
+        <button class="flow-back" id="flow-back" aria-label="Back from Flow State"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
         <strong>Now Playing</strong>
         <span class="flow-topbar__spacer" aria-hidden="true"></span>
       </div>
@@ -996,21 +1034,21 @@
             <div class="flow-times"><span id="flow-current">0:00</span><span id="flow-total">0:00</span></div>
           </div>
           <div class="flow-controls">
-            <button id="flow-shuffle" aria-label="Shuffle">⤨</button>
-            <button id="flow-prev" aria-label="Previous">|‹</button>
-            <button class="flow-play" id="flow-play" aria-label="Play or pause">▶</button>
-            <button id="flow-next" aria-label="Next">›|</button>
+            <button id="flow-shuffle" aria-label="Shuffle"><span class="app-icon app-icon--shuffle" aria-hidden="true"></span></button>
+            <button id="flow-prev" aria-label="Previous"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
+            <button class="flow-play" id="flow-play" aria-label="Play or pause"><span class="app-icon app-icon--play" aria-hidden="true"></span></button>
+            <button id="flow-next" aria-label="Next"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
             <button id="flow-repeat" aria-label="Repeat">↻</button>
           </div>
           <div class="flow-secondary">
             <button id="flow-like">♡ Like</button>
-            <button id="flow-radio">◈ Song radio</button>
-            <button id="flow-save">↓ Save album</button>
+            <button id="flow-radio"><span class="app-icon app-icon--radio-alt" aria-hidden="true"></span><span>Song radio</span></button>
+            <button id="flow-save"><span class="app-icon app-icon--bookmark-before" aria-hidden="true"></span><span>Save album</span></button>
             <button id="flow-queue">☷ Queue</button>
           </div>
-          <p class="flow-lyrics-label">LYRICS</p>
+          <p class="flow-lyrics-label"><span class="app-icon app-icon--lyrics" aria-hidden="true"></span> LYRICS</p>
           <p class="flow-note" id="flow-note">Let the room disappear for a while.</p>
-          <button class="flow-lyrics-open" id="flow-lyrics-open">See synced lyrics →</button>
+          <button class="flow-lyrics-open" id="flow-lyrics-open"><span class="app-icon app-icon--lyrics" aria-hidden="true"></span><span>See synced lyrics</span></button>
         </div>
       </div>
     </div>
@@ -1025,7 +1063,7 @@
           <h2 class="lyrics-title" id="lyrics-title">Nothing playing</h2>
           <p class="lyrics-artist" id="lyrics-artist">Choose a song to begin</p>
         </div>
-        <button class="lyrics-close" id="lyrics-close" aria-label="Close lyrics" title="Close lyrics">×</button>
+        <button class="lyrics-close" id="lyrics-close" aria-label="Close lyrics" title="Close lyrics"><span class="app-icon app-icon--cross-circle" aria-hidden="true"></span></button>
       </header>
       <div class="lyrics-stage">
         <div class="lyrics-scroll" id="lyrics-lines" tabindex="0" aria-label="Lyrics, tap a line to jump there"></div>
@@ -1040,9 +1078,9 @@
           <span id="lyrics-total">0:00</span>
         </div>
         <div class="lyrics-controls">
-          <button id="lyrics-prev" aria-label="Previous song" title="Previous">|‹</button>
-          <button class="lyrics-play" id="lyrics-play" aria-label="Play or pause" title="Play or pause">▶</button>
-          <button id="lyrics-next" aria-label="Next song" title="Next">›|</button>
+          <button id="lyrics-prev" aria-label="Previous song" title="Previous"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
+          <button class="lyrics-play" id="lyrics-play" aria-label="Play or pause" title="Play or pause"><span class="app-icon app-icon--play" aria-hidden="true"></span></button>
+          <button id="lyrics-next" aria-label="Next song" title="Next"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
         </div>
       </footer>
     </div>
@@ -1053,19 +1091,19 @@
     <div class="toast-root" id="toast-root" aria-live="polite"></div>
   </div>
 
-  <script src="js/data.js?v=1140"></script>
-  <script src="js/artwork.js?v=1157"></script>
-  <script src="js/store.js?v=1175"></script>
-  <script src="js/web-seed.js?v=1113"></script>
-  <script src="js/web-jio-catalog.js?v=1113"></script>
-  <script src="js/spotify.js?v=1175"></script>
-  <script src="js/musicatlas.js?v=1175"></script>
-  <script src="js/web-api.js?v=1175"></script>
-  <script src="js/api.js?v=1175"></script>
-  <script src="js/player.js?v=1175"></script>
-  <script src="js/lyrics.js?v=1175"></script>
-  <script src="js/ui.js?v=1175"></script>
-  <script src="js/app.js?v=1175"></script>
+  <script src="js/data.js?v=1181"></script>
+  <script src="js/artwork.js?v=1181"></script>
+  <script src="js/store.js?v=1181"></script>
+  <script src="js/web-seed.js?v=1181"></script>
+  <script src="js/web-jio-catalog.js?v=1181"></script>
+  <script src="js/spotify.js?v=1181"></script>
+  <script src="js/musicatlas.js?v=1181"></script>
+  <script src="js/web-api.js?v=1181"></script>
+  <script src="js/api.js?v=1181"></script>
+  <script src="js/player.js?v=1181"></script>
+  <script src="js/lyrics.js?v=1181"></script>
+  <script src="js/ui.js?v=1181"></script>
+  <script src="js/app.js?v=1181"></script>
 </body>
 
 </html>

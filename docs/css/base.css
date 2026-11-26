@@ -373,6 +373,85 @@ body.no-ambience .ambient { opacity: 0; }
   color: var(--accent);
 }
 
+/* Advance settings equalizer. The card spans the grid so five bands fit
+   without squeezing the other settings or causing horizontal overflow. */
+.account-card--equalizer { grid-column: 1 / -1; }
+.equalizer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.equalizer-head .eyebrow { margin-bottom: 6px; }
+.equalizer-head h3 { margin-bottom: 0; }
+.switch-row--compact {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+}
+.eq-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.eq-toolbar .field-label { margin-bottom: 0; }
+.eq-select,
+.eq-btn {
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, .82);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+.eq-select { padding: 0 30px 0 10px; }
+.eq-btn {
+  padding: 0 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.eq-btn:hover { background: #fff; box-shadow: var(--shadow-soft); }
+.eq-bands {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+.eq-band {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .55);
+  border: 1px solid var(--line);
+}
+.account-card--equalizer.is-off .eq-band { opacity: .58; }
+.eq-band__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+.eq-band input[type="range"] {
+  width: 100%;
+  margin: 12px 0 4px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.eq-status { color: var(--accent); }
+:root[data-theme="dark"] .eq-select,
+:root[data-theme="dark"] .eq-btn,
+:root[data-theme="dark"] .eq-band { background: rgba(255, 255, 255, .06); }
+:root[data-theme="dark"] .eq-btn:hover { background: rgba(255, 255, 255, .12); }
+@media (max-width: 680px) {
+  .eq-bands { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 /* Central artwork loader: a generated placeholder is always painted first,
    then the verified remote image fades in without changing layout. */
 .cover-image { transition: opacity .24s ease, filter .24s ease; }

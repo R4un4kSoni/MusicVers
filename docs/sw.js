@@ -1,5 +1,5 @@
 /* musicVer app shell service worker. Network-first for page assets, never intercepts API calls. */
-const CACHE = 'musicver-shell-v1175';
+const CACHE = 'musicver-shell-v1181';
 const SHELL = [
   './',
   './index.html',
@@ -11,7 +11,23 @@ const SHELL = [
   './guides/step-2-folder.svg',
   './guides/step-3-login.svg',
   './guides/step-4-deploy.svg',
-  './guides/step-5-app.svg'
+  './guides/step-5-app.svg',
+  './assets/icons/angle-left.svg',
+  './assets/icons/angle-right.svg',
+  './assets/icons/bookmark-after.svg',
+  './assets/icons/bookmark-before.svg',
+  './assets/icons/cross-circle.svg',
+  './assets/icons/feedback.svg',
+  './assets/icons/home.svg',
+  './assets/icons/island-icon.svg',
+  './assets/icons/lyrics.svg',
+  './assets/icons/pause.svg',
+  './assets/icons/play.svg',
+  './assets/icons/plus-hexagon.svg',
+  './assets/icons/radio-alt.svg',
+  './assets/icons/shuffle.svg',
+  './assets/icons/volume.svg',
+  './assets/icons/volume-slash.svg'
 ];
 
 self.addEventListener('install', (event) => {

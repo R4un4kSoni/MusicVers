@@ -23,6 +23,7 @@
   const SPOTIFY_META_KEY = 'musicver.web.spotifyMeta.v1';
   const MAX_STORED_SPOTIFY_META = 600;
   const FOLDER_KEY = 'musicver.web.folderName';
+  const EQ_FREQUENCIES = [60, 250, 1000, 4000, 12000];
 
   const apiBase = read(API_BASE_KEY) || DEFAULT_API;
   const streamCache = new Map();
@@ -43,6 +44,12 @@
   let streamQueue = [];
   let streamIndex = 0;
   let playRequestId = 0;
+  let audioContext = null;
+  let eqSource = null;
+  let eqDryGain = null;
+  let eqWetGain = null;
+  let eqFilters = [];
+  let audioGraphFailed = false;
 
   /* ---------------- small storage helpers ---------------- */
 
@@ -1151,11 +1158,95 @@
     return { songs: pool.filter(hit), albums: [], artists: [] };
   }
 
+  /* ---------------- Web Audio equalizer ---------------- */
+
+  function normalizeEqualizer(settings) {
+    const eq = settings || ((MV.store && MV.store.state && MV.store.state.equalizer) || {});
+    const storedBands = Array.isArray(eq.bands) ? eq.bands : [];
+    return {
+      enabled: Boolean(eq.enabled),
+      preset: typeof eq.preset === 'string' && eq.preset ? eq.preset : 'flat',
+      bands: EQ_FREQUENCIES.map((frequency, index) => clamp(storedBands[index], -12, 12))
+    };
+  }
+
+  function applyAudioParam(param, value) {
+    if (!param) return;
+    try {
+      if (audioContext && typeof param.setTargetAtTime === 'function') {
+        param.setTargetAtTime(value, audioContext.currentTime, 0.02);
+        return;
+      }
+    } catch (error) { /* fall through to direct assignment */ }
+    param.value = value;
+  }
+
+  function applyEqualizer(settings) {
+    const eq = normalizeEqualizer(settings);
+    if (audioContext) {
+      applyAudioParam(eqDryGain && eqDryGain.gain, eq.enabled ? 0 : 1);
+      applyAudioParam(eqWetGain && eqWetGain.gain, eq.enabled ? 1 : 0);
+      eqFilters.forEach((filter, index) => applyAudioParam(filter.gain, eq.bands[index]));
+    }
+    return eq;
+  }
+
+  function ensureAudioGraph() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx || audioGraphFailed) return null;
+    if (!audioContext && !normalizeEqualizer().enabled) return null;
+    const element = getAudio();
+    if (!audioContext) {
+      try {
+        audioContext = new Ctx();
+        eqSource = audioContext.createMediaElementSource(element);
+        eqDryGain = audioContext.createGain();
+        eqWetGain = audioContext.createGain();
+        eqDryGain.gain.value = 1;
+        eqWetGain.gain.value = 0;
+        eqSource.connect(eqDryGain);
+        eqDryGain.connect(audioContext.destination);
+
+        let tail = eqSource;
+        EQ_FREQUENCIES.forEach((frequency) => {
+          const filter = audioContext.createBiquadFilter();
+          filter.type = 'peaking';
+          filter.frequency.value = frequency;
+          filter.Q.value = 1;
+          filter.gain.value = 0;
+          tail.connect(filter);
+          tail = filter;
+          eqFilters.push(filter);
+        });
+        tail.connect(eqWetGain);
+        eqWetGain.connect(audioContext.destination);
+      } catch (error) {
+        console.warn('musicVer: equalizer could not start', error);
+        audioGraphFailed = true;
+        audioContext = null;
+        eqSource = null;
+        eqDryGain = null;
+        eqWetGain = null;
+        eqFilters = [];
+        return null;
+      }
+    }
+    if (audioContext.state === 'suspended') {
+      const resume = audioContext.resume();
+      if (resume && resume.catch) resume.catch(() => { /* resume on next gesture */ });
+    }
+    applyEqualizer();
+    return audioContext;
+  }
+
   /* ---------------- HTML audio engine ---------------- */
 
   function getAudio() {
     if (audio) return audio;
     audio = new Audio();
+    // JioSaavn's CDN returns Access-Control-Allow-Origin: *, which is required
+    // for MediaElementAudioSourceNode to feed the equalizer instead of silence.
+    audio.crossOrigin = 'anonymous';
     audio.preload = 'metadata';
     audio.addEventListener('playing', () => { playbackState = 'playing'; });
     audio.addEventListener('pause', () => { if (!switching) playbackState = 'paused'; });
@@ -1187,6 +1278,7 @@
     streamQueue = list;
     streamIndex = 0;
     const element = getAudio();
+    if (normalizeEqualizer().enabled) ensureAudioGraph();
     switching = true;
     element.pause();
     element.src = list[0];
@@ -1838,6 +1930,13 @@
       const element = getAudio();
       element.volume = clamp(value, 0, 1);
       return { success: true };
+    },
+
+    set_equalizer(settings) {
+      const eq = normalizeEqualizer(settings);
+      if (eq.enabled) ensureAudioGraph();
+      applyEqualizer(eq);
+      return { success: true, equalizer: eq };
     },
 
     get_progress() {

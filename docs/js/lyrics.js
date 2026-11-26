@@ -278,7 +278,8 @@
       return;
     }
     if (playButton) {
-      playButton.textContent = lastSnapshot.playing ? '❚❚' : '▶';
+      if (MV.icon) playButton.innerHTML = MV.icon(lastSnapshot.playing ? 'pause' : 'play');
+      else playButton.textContent = lastSnapshot.playing ? '❚❚' : '▶';
       playButton.setAttribute('aria-label', lastSnapshot.playing ? 'Pause' : 'Play');
     }
 

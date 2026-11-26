@@ -28,7 +28,12 @@
     themeCrossfadeOnly: false,
     volume: 70,
     shuffle: false,
-    repeat: 'off'
+    repeat: 'off',
+    equalizer: {
+      enabled: false,
+      preset: 'flat',
+      bands: [0, 0, 0, 0, 0]
+    }
   };
 
   function clone(value) { return JSON.parse(JSON.stringify(value)); }

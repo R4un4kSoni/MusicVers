@@ -492,7 +492,12 @@
   width: 196px;
   padding: 10px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, .6);
+  /* background: rgba(255, 255, 255, .6); */
+  background: linear-gradient(
+    #FFBF00,
+    #FBCEB1,
+    #F2D2BD
+  );
   border: 1px solid rgba(255, 255, 255, .82);
   box-shadow: var(--shadow-soft);
   text-align: left;
@@ -788,3 +793,103 @@
 @media (max-width: 820px) {
   .player { left: 12px; right: 12px; bottom: 10px; }
 }
+
+/* ---------------- local icon set ---------------- */
+
+.app-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 1em;
+  height: 1em;
+  background-color: currentColor;
+  vertical-align: -.14em;
+  -webkit-mask-image: var(--app-icon);
+  mask-image: var(--app-icon);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.app-icon--angle-left { --app-icon: url('../assets/icons/angle-left.svg'); }
+.app-icon--angle-right { --app-icon: url('../assets/icons/angle-right.svg'); }
+.app-icon--bookmark-after { --app-icon: url('../assets/icons/bookmark-after.svg'); }
+.app-icon--bookmark-before { --app-icon: url('../assets/icons/bookmark-before.svg'); }
+.app-icon--cross-circle { --app-icon: url('../assets/icons/cross-circle.svg'); }
+.app-icon--feedback { --app-icon: url('../assets/icons/feedback.svg'); }
+.app-icon--home { --app-icon: url('../assets/icons/home.svg'); }
+.app-icon--island-icon { --app-icon: url('../assets/icons/island-icon.svg'); }
+.app-icon--lyrics { --app-icon: url('../assets/icons/lyrics.svg'); }
+.app-icon--pause { --app-icon: url('../assets/icons/pause.svg'); }
+.app-icon--play { --app-icon: url('../assets/icons/play.svg'); }
+.app-icon--plus-hexagon { --app-icon: url('../assets/icons/plus-hexagon.svg'); }
+.app-icon--radio-alt { --app-icon: url('../assets/icons/radio-alt.svg'); }
+.app-icon--shuffle { --app-icon: url('../assets/icons/shuffle.svg'); }
+.app-icon--volume { --app-icon: url('../assets/icons/volume.svg'); }
+.app-icon--volume-slash { --app-icon: url('../assets/icons/volume-slash.svg'); }
+
+.island-pearl .app-icon { width: 30px; height: 30px; color: var(--ink); }
+.island-tab__icon .app-icon { width: 100%; height: 100%; }
+.top-menu__item .app-icon { width: 18px; height: 18px; }
+.beta-notice__close .app-icon,
+.queue-close .app-icon,
+.flow-close .app-icon,
+.flow-back .app-icon,
+.lyrics-close .app-icon { width: 1em; height: 1em; }
+
+.media-card__play .app-icon,
+.song-row__play .app-icon { width: 13px; height: 13px; }
+.media-card__save .app-icon,
+.icon-toggle--save .app-icon { width: 16px; height: 16px; }
+.player-controls .app-icon,
+.player-extra .app-icon,
+.control--lyrics .app-icon { width: 17px; height: 17px; }
+.play-main .app-icon { width: 18px; height: 18px; }
+.add-round .app-icon { width: 18px; height: 18px; }
+.empty-state__icon .app-icon { width: 34px; height: 34px; }
+.btn--outline .app-icon { width: 14px; height: 14px; }
+
+.flow-secondary button,
+.flow-lyrics-open,
+.btn--outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.flow-controls .app-icon { width: 1em; height: 1em; }
+.flow-play .app-icon { width: 24px; height: 24px; }
+.flow-secondary button .app-icon,
+.flow-lyrics-open .app-icon,
+.flow-lyrics-label .app-icon { width: 14px; height: 14px; }
+.playlist-card--create > .app-icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 10px;
+}
+
+.btn--dark,
+.btn--cream,
+.back-btn,
+.wrapped-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn--dark .app-icon,
+.btn--cream .app-icon,
+.back-btn .app-icon,
+.wrapped-btn .app-icon { width: 14px; height: 14px; }
+.hero-arrow .app-icon,
+.rail-arrow .app-icon { width: 15px; height: 15px; }
+.search-bar__clear .app-icon,
+.search-close .app-icon { width: 1em; height: 1em; }
+.playlist-play-big .app-icon { width: 22px; height: 22px; }
+.lib-tile__icon .app-icon { width: 22px; height: 22px; }
+.top-result__action .app-icon { width: 14px; height: 14px; }

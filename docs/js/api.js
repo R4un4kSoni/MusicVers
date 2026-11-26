@@ -238,6 +238,16 @@
   function seek(seconds) { return isLive() ? call('seek_song', Math.max(0, Math.round(seconds))).catch(() => null) : Promise.resolve(null); }
   function setVolume(value) { return isLive() ? call('set_volume', Math.max(0, Math.min(1, value))).catch(() => null) : Promise.resolve(null); }
 
+  function setEqualizer(settings) {
+    if (settings) MV.store.setPreference('equalizer', settings);
+    const api = bridge();
+    if (api && typeof api.set_equalizer === 'function') {
+      try { return Promise.resolve(api.set_equalizer(settings)); }
+      catch (error) { return Promise.resolve(null); }
+    }
+    return Promise.resolve(settings || null);
+  }
+
   async function progress() {
     if (!isLive()) return null;
     try {
@@ -577,7 +587,7 @@
   MV.api = {
     bridge, isLive, call, waitForBridge,
     discover, search, albumTracks, artistTracks,
-    play, pause, resume, stop, seek, setVolume, progress, lyrics, syncedLyrics,
+    play, pause, resume, stop, seek, setVolume, setEqualizer, progress, lyrics, syncedLyrics,
     ensureLibraryId, toggleLike, createPlaylist, deletePlaylist, renamePlaylist,
     setPlaylistCover, addToPlaylist, removeFromPlaylist, chooseFolder, folderPath,
     albumKey, saveAlbum, removeSavedAlbum, getTheme, setTheme, syncLibrary,

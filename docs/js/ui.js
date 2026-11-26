@@ -13,6 +13,14 @@
   let coverCallback = null;
   let heroTimer = null;
   const PENDING_SPOTIFY_IMPORT_KEY = 'musicver.spotify.pendingImport';
+  const EQ_PRESETS = {
+    flat: [0, 0, 0, 0, 0],
+    bass: [6, 3, 0, -1, -1],
+    vocal: [-2, 1, 4, 2, -1],
+    treble: [-1, -1, 0, 3, 5],
+    rock: [4, 1, -1, 2, 3],
+    jazz: [3, 2, 0, 2, 3]
+  };
 
   MV.registry = registry;
 
@@ -67,6 +75,13 @@
       (round ? ' data-cover-round="true"' : '') +
       ' loading="lazy" decoding="async">';
   }
+  function icon(name) {
+    return '<span class="app-icon app-icon--' + name + '" aria-hidden="true"></span>';
+  }
+  function playIcon(playing) { return icon(playing ? 'pause' : 'play'); }
+  function saveIcon(saved) { return icon(saved ? 'bookmark-after' : 'bookmark-before'); }
+  MV.icon = icon;
+
   function fmt(seconds) {
     const value = Math.max(0, Number(seconds) || 0);
     const minutes = Math.floor(value / 60);
@@ -449,13 +464,14 @@
       settings.spotify ? 'media-card--spotify' : ''
     ].join(' ').replace(/\s+/g, ' ').trim();
     const glyph = settings.glyph || (opensDetails ? '↗' : '▶');
+    const glyphMarkup = glyph === '▶' ? icon('play') : glyph === '＋' ? icon('plus-hexagon') : glyph;
 
     return '<article class="' + classes + '" tabindex="0" role="button" data-action="' + action + '" data-key="' + key + '" data-tilt aria-label="' + (opensDetails ? 'Open ' : 'Play ') + esc(title) + '">' +
       '<div class="media-card__art">' + cardArt(item, title, isArtist, type) +
       '<span class="media-card__shine"></span>' +
-      '<button class="media-card__play" aria-label="' + (opensDetails ? 'Open details' : 'Open mix') + '">' + glyph + '</button>' +
+      '<button class="media-card__play" aria-label="' + (opensDetails ? 'Open details' : 'Open mix') + '">' + glyphMarkup + '</button>' +
       (type === 'album'
-        ? '<button class="media-card__save ' + (saved ? 'is-saved' : '') + '" data-action="save-album" data-key="' + key + '" aria-label="Save album" title="Save album to library">' + (saved ? '✓' : '↓') + '</button>'
+        ? '<button class="media-card__save ' + (saved ? 'is-saved' : '') + '" data-action="save-album" data-key="' + key + '" aria-label="' + (saved ? 'Saved album' : 'Save album') + '" title="' + (saved ? 'Saved to library' : 'Save album to library') + '">' + saveIcon(saved) + '</button>'
         : '') +
       '</div><div class="media-card__meta"><strong>' + esc(title) + '</strong><span>' + esc(subtitle) + '</span></div></article>';
   }
@@ -491,7 +507,7 @@
         ? '<button class="song-row__more" data-action="song-menu" data-key="' + key + '" data-in-playlist="1" aria-label="More options" title="More options">···</button>'
         : '<button class="song-row__like ' + (liked ? 'is-liked' : '') + '" data-action="like-song" data-key="' + key + '" aria-label="Like song">' + (liked ? '♥' : '♡') + '</button>' +
           '<button class="song-row__more" data-action="song-menu" data-key="' + key + '" aria-label="More options" title="More options">···</button>') +
-      '<button class="song-row__play" aria-label="Play">▶</button></article>';
+      '<button class="song-row__play" aria-label="Play">' + icon('play') + '</button></article>';
   }
 
   function sparkle(button, liked) {
@@ -1201,7 +1217,7 @@
       '<div class="top-result__copy"><span class="top-result__type">' + esc(top.type) + '</span>' +
       '<strong>' + esc(title) + '</strong><small>' + esc(subtitle) + '</small></div>' +
       '<button class="top-result__action" data-action="' + action + '" data-key="' + key + '" aria-label="' + (top.type === 'Song' ? 'Play ' : 'Open ') + esc(title) + '">' +
-      (top.type === 'Song' ? '▶' : '↗') + '</button></article>';
+      (top.type === 'Song' ? icon('play') : '↗') + '</button></article>';
   }
 
   function renderResults() {
@@ -1319,14 +1335,14 @@
     document.querySelectorAll('.library-tab[data-library-tab]').forEach((tab) =>
       tab.classList.toggle('is-active', tab.dataset.libraryTab === view));
 
-    const createCard = '<button class="playlist-card playlist-card--create" data-action="create-playlist"><span>＋</span><strong>New playlist</strong></button>';
+    const createCard = '<button class="playlist-card playlist-card--create" data-action="create-playlist">' + icon('plus-hexagon') + '<strong>New playlist</strong></button>';
     const playlists = state.playlists.map(playlistCard).join('') + createCard;
     const liked = state.liked.length
       ? '<div class="song-list">' + state.liked.map((song, i) => songRow(song, i)).join('') + '</div>'
       : libraryEmpty('♥', 'Nothing liked yet', 'Tap the heart on a song to keep it here.');
     const saved = state.savedAlbums.length
       ? '<div class="grid-rail">' + state.savedAlbums.map(savedCard).join('') + '</div>'
-      : libraryEmpty('↓', 'No saved albums', 'Use the ↓ button on any album to save it to your library.');
+      : libraryEmpty(icon('bookmark-before'), 'No saved albums', 'Use the bookmark button on any album to save it to your library.');
     const local = MV.localSongs.length
       ? '<div class="song-list">' + MV.localSongs.map((song, i) => songRow(song, i)).join('') + '</div>'
       : libraryEmpty('⌁', 'No local songs found', 'Choose your music folder from Settings to scan your collection.');
@@ -1779,11 +1795,11 @@
       '<p class="eyebrow">SONG OPTIONS</p><h2>' + esc(song.title) + '</h2><p>' + esc(song.artist) + '</p>' +
       '<div class="account-actions" style="margin-top:18px">' +
       '<button class="btn btn--outline" data-sm="play">▶ Play now</button>' +
-      '<button class="btn btn--outline" data-sm="radio">◈ Song radio</button>' +
+      '<button class="btn btn--outline" data-sm="radio">' + icon('radio-alt') + '<span>Song radio</span></button>' +
       '<button class="btn btn--outline" data-sm="queue">＋ Add to queue</button>' +
       '<button class="btn btn--outline" data-sm="like">' + (liked ? '♥ Remove from Liked' : '♡ Add to Liked') + '</button>' +
       '<button class="btn btn--outline" data-sm="playlist">≋ Add to playlist</button>' +
-      '<button class="btn btn--outline" data-sm="save">↓ Save album to library</button>' +
+      '<button class="btn btn--outline" data-sm="save">' + icon('bookmark-before') + '<span>Save album to library</span></button>' +
       (inPlaylist ? '<button class="btn btn--danger-ghost" data-sm="remove">× Remove from this playlist</button>' : '') + '</div>' +
       '<div class="modal__actions"><button class="btn btn--dark" data-modal="done">Done</button></div>',
       (root) => {
@@ -2440,7 +2456,7 @@
       const saved = MV.store.isAlbumSaved(album);
       // Keep this control icon-only: the compact album header has no room for
       // long button labels.
-      saveButton.innerHTML = '<span>' + (saved ? '✓' : '↓') + '</span>';
+      saveButton.innerHTML = saveIcon(saved);
       saveButton.setAttribute('aria-label', saved ? 'Saved to library' : 'Save album');
       saveButton.setAttribute('title', saved ? 'Saved to library' : 'Save album');
       saveButton.classList.toggle('is-on', saved);
@@ -2509,7 +2525,7 @@
       (verified ? '<span class="artist-hero__verified">✓ Verified artist</span>' : '') + '</div>' +
       '<p class="artist-hero__bio">' + esc(bio) + '</p>' +
       '<div class="artist-hero__actions">' +
-      '<button class="btn btn--dark" id="artist-hero-play"><span>▶</span> Play popular</button>' +
+      '<button class="btn btn--dark" id="artist-hero-play">' + icon('play') + '<span>Play popular</span></button>' +
       '<button class="btn btn--outline" id="artist-hero-queue">＋ Queue popular</button>' +
       '</div></div>';
     el('artist-hero').querySelectorAll('img').forEach((img) => img.classList.add('artist-hero__cover'));
@@ -2588,7 +2604,7 @@
     cover.innerHTML = track ? image(track.cover, track.title, false, track, 'song', true) : '♪';
     el('player-title').textContent = track ? track.title : 'Nothing playing';
     el('player-artist').textContent = track ? track.artist : 'Choose a song to begin';
-    el('main-play').textContent = snap.playing ? '❚❚' : '▶';
+    el('main-play').innerHTML = playIcon(snap.playing);
     el('main-play').setAttribute('aria-label', snap.playing ? 'Pause' : 'Play');
 
     const liked = Boolean(track && MV.store.isLiked(track.id));
@@ -2601,8 +2617,10 @@
     const album = MV.player.currentAlbum();
     const saved = Boolean(album && MV.store.isAlbumSaved(album));
     const save = el('player-save');
+    save.innerHTML = saveIcon(saved);
     save.classList.toggle('is-on', saved);
     save.setAttribute('aria-pressed', String(saved));
+    save.setAttribute('aria-label', saved ? 'Remove album from saved' : 'Save current album');
     save.title = saved ? 'Remove album from saved' : 'Save album to library';
 
     el('shuffle').classList.toggle('is-on', snap.shuffle);
@@ -2615,7 +2633,10 @@
 
     el('volume').value = String(snap.volume);
     el('volume').style.setProperty('--vol', snap.volume + '%');
-    el('volume-icon').textContent = snap.volume === 0 ? '◖' : '◖';
+    const volumeIcon = el('volume-icon');
+    volumeIcon.innerHTML = icon(snap.volume === 0 ? 'volume-slash' : 'volume');
+    volumeIcon.setAttribute('aria-label', snap.volume === 0 ? 'Unmute' : 'Mute');
+    volumeIcon.title = snap.volume === 0 ? 'Unmute' : 'Mute';
 
     renderQueue(snap);
     updateProgress(snap);
@@ -2686,7 +2707,7 @@
   function renderFlow(snap) {
     const track = snap && snap.current;
     const play = el('flow-play');
-    play.textContent = snap && snap.playing ? '❚❚' : '▶';
+    play.innerHTML = playIcon(Boolean(snap && snap.playing));
     el('flow-shuffle').classList.toggle('is-on', Boolean(snap && snap.shuffle));
     el('flow-repeat').classList.toggle('is-on', Boolean(snap && snap.repeat !== 'off'));
 
@@ -2715,8 +2736,11 @@
     }
     const album = MV.player.currentAlbum();
     const saved = Boolean(album && MV.store.isAlbumSaved(album));
-    el('flow-save').textContent = saved ? '✓ Saved' : '↓ Save album';
-    el('flow-save').classList.toggle('is-on', saved);
+    const flowSave = el('flow-save');
+    flowSave.innerHTML = saveIcon(saved) + '<span>' + (saved ? 'Saved' : 'Save album') + '</span>';
+    flowSave.setAttribute('aria-label', saved ? 'Remove album from saved' : 'Save album');
+    flowSave.title = saved ? 'Remove album from saved' : 'Save album to library';
+    flowSave.classList.toggle('is-on', saved);
 
   }
 
@@ -3531,6 +3555,41 @@
       crossfadeSetting.onchange = (event) =>
         MV.store.setPreference('themeCrossfadeOnly', event.target.checked);
     }
+
+    const eqToggle = el('setting-eq-enabled');
+    if (eqToggle) eqToggle.onchange = (event) => saveEqualizer({ enabled: event.target.checked });
+
+    const eqPreset = el('setting-eq-preset');
+    if (eqPreset) {
+      eqPreset.onchange = (event) => {
+        const name = event.target.value;
+        if (name === 'custom') { renderEqualizer(); return; }
+        saveEqualizer({ preset: name, bands: (EQ_PRESETS[name] || EQ_PRESETS.flat).slice() });
+        toast(name === 'flat' ? 'Equalizer set to flat.' : equalizerPresetLabel(name) + ' preset applied.');
+      };
+    }
+
+    for (let index = 0; index < EQ_PRESETS.flat.length; index += 1) {
+      const slider = el('eq-band-' + index);
+      if (!slider) continue;
+      const label = el('eq-value-' + index);
+      slider.addEventListener('input', (event) => {
+        if (label) label.textContent = formatDb(event.target.value);
+      });
+      slider.addEventListener('change', (event) => {
+        const bands = getEqualizerSettings().bands.slice();
+        bands[index] = Math.min(12, Math.max(-12, Math.round(Number(event.target.value) || 0)));
+        saveEqualizer({ preset: 'custom', bands });
+      });
+    }
+
+    const eqReset = el('setting-eq-reset');
+    if (eqReset) {
+      eqReset.onclick = () => {
+        saveEqualizer({ preset: 'flat', bands: EQ_PRESETS.flat.slice() });
+        toast('Equalizer reset to flat.');
+      };
+    }
   }
 
   /* ---------------- theme ---------------- */
@@ -3738,6 +3797,64 @@
 
   /* ---------------- account + render all ---------------- */
 
+  function formatDb(value) {
+    const number = Math.round(Number(value) || 0);
+    return (number > 0 ? '+' : '') + number + ' dB';
+  }
+
+  function equalizerPresetLabel(name) {
+    const labels = {
+      flat: 'Flat', bass: 'Bass boost', vocal: 'Vocal', treble: 'Treble boost',
+      rock: 'Rock', jazz: 'Jazz', custom: 'Custom'
+    };
+    return labels[name] || 'Flat';
+  }
+
+  function getEqualizerSettings() {
+    const stored = (MV.store.state && MV.store.state.equalizer) || {};
+    const bands = Array.isArray(stored.bands) ? stored.bands : [];
+    return {
+      enabled: Boolean(stored.enabled),
+      preset: typeof stored.preset === 'string' && stored.preset ? stored.preset : 'flat',
+      bands: EQ_PRESETS.flat.map((fallback, index) => {
+        const value = Number(bands[index]);
+        return Number.isFinite(value) ? Math.min(12, Math.max(-12, Math.round(value))) : fallback;
+      })
+    };
+  }
+
+  function saveEqualizer(patch) {
+    const next = { ...getEqualizerSettings(), ...patch };
+    if (MV.api && MV.api.setEqualizer) MV.api.setEqualizer(next);
+    else MV.store.setPreference('equalizer', next);
+    renderEqualizer();
+  }
+
+  function renderEqualizer() {
+    const toggle = el('setting-eq-enabled');
+    if (!toggle) return;
+    const eq = getEqualizerSettings();
+    toggle.checked = eq.enabled;
+    const preset = el('setting-eq-preset');
+    if (preset) {
+      const name = EQ_PRESETS[eq.preset] || eq.preset === 'custom' ? eq.preset : 'flat';
+      preset.value = name;
+    }
+    for (let index = 0; index < EQ_PRESETS.flat.length; index += 1) {
+      const slider = el('eq-band-' + index);
+      const value = el('eq-value-' + index);
+      if (slider) slider.value = String(eq.bands[index]);
+      if (value) value.textContent = formatDb(eq.bands[index]);
+    }
+    const card = toggle.closest('.account-card--equalizer');
+    if (card) card.classList.toggle('is-off', !eq.enabled);
+    const status = el('eq-status');
+    if (status) {
+      status.textContent = (eq.enabled ? 'Equalizer on · ' : 'Equalizer off · ') +
+        equalizerPresetLabel(eq.preset);
+    }
+  }
+
   function updateLyricsSpeedLabel(value) {
     const node = el('lyrics-speed-value');
     if (!node) return;
@@ -3756,6 +3873,7 @@
     updateLyricsSpeedLabel(speed);
     const crossfade = el('setting-crossfade-theme');
     if (crossfade) crossfade.checked = Boolean(MV.store.state.themeCrossfadeOnly);
+    renderEqualizer();
   }
 
   function renderAccount() {
