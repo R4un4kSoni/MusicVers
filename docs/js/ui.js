@@ -51,6 +51,50 @@
   let addSongsPage = 0;
 
   function el(id) { return document.getElementById(id); }
+  function lyricsAreOld() {
+    return Boolean(MV.store && MV.store.state && MV.store.state.profile &&
+      MV.store.state.profile.lyricsMode === 'old');
+  }
+  function activeLyrics() {
+    return lyricsAreOld() ? MV.lyricsPublished : MV.lyrics;
+  }
+  function applyLyricsModeSettings() {
+    const old = lyricsAreOld();
+    const css = el('lyrics-published-css');
+    const newView = el('lyrics-view');
+    const publishedView = el('lyrics-view-published');
+
+    if (css) css.disabled = !old;
+
+    if (old && MV.lyrics) {
+      if (MV.lyrics.isOpen()) MV.lyrics.close();
+      if (newView) {
+        newView.hidden = true;
+        newView.inert = true;
+      }
+    } else if (MV.lyrics) {
+      if (newView) {
+        newView.hidden = false;
+        newView.inert = !MV.lyrics.isOpen();
+      }
+      if (MV.lyrics.applySettings) MV.lyrics.applySettings();
+    }
+
+    if (!old && MV.lyricsPublished) {
+      if (MV.lyricsPublished.isOpen()) MV.lyricsPublished.close();
+      if (publishedView) {
+        publishedView.hidden = true;
+        publishedView.inert = true;
+      }
+    } else if (MV.lyricsPublished) {
+      if (publishedView) {
+        publishedView.hidden = false;
+        publishedView.inert = !MV.lyricsPublished.isOpen();
+      }
+      const snap = MV.player && MV.player.snapshot ? MV.player.snapshot() : null;
+      if (snap) MV.lyricsPublished.sync(snap, true);
+    }
+  }
   function esc(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -2656,7 +2700,8 @@
     }
     el('current-time').textContent = fmt(snap.elapsed);
     el('total-time').textContent = fmt(snap.duration);
-    if (MV.lyrics) MV.lyrics.sync(snap);
+    const lyrics = activeLyrics();
+    if (lyrics) lyrics.sync(snap);
 
     el('flow-progress-fill').style.width = pct;
     el('flow-progress-knob').style.left = pct;
@@ -3123,7 +3168,7 @@
       const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement && document.activeElement.tagName);
       if (event.key === 'Escape') {
         if (!el('modal-root').hidden) closeModal();
-        else if (MV.lyrics && MV.lyrics.isOpen()) MV.lyrics.close();
+        else if (activeLyrics() && activeLyrics().isOpen()) activeLyrics().close();
         else if (el('flow').classList.contains('is-open')) closeFlow();
         else if (!el('queue-drawer').hidden) closeQueue();
         return;
@@ -3214,9 +3259,16 @@
     });
     el('top-flow').onclick = () => openFlow();
     const lyricsLaunch = el('lyrics-launch');
-    if (lyricsLaunch) lyricsLaunch.onclick = () => MV.lyrics.toggle();
+    if (lyricsLaunch) lyricsLaunch.onclick = () => {
+      const lyrics = activeLyrics();
+      if (lyrics) lyrics.toggle();
+    };
     const flowLyrics = el('flow-lyrics-open');
-    if (flowLyrics) flowLyrics.onclick = () => { closeFlow(); MV.lyrics.open(); };
+    if (flowLyrics) flowLyrics.onclick = () => {
+      closeFlow();
+      const lyrics = activeLyrics();
+      if (lyrics) lyrics.open();
+    };
     el('flow-close').onclick = closeFlow;
     const flowBack = el('flow-back');
     if (flowBack) flowBack.onclick = closeFlow;
@@ -3424,6 +3476,31 @@
         updateLyricsSpeedLabel(speed);
       });
       updateLyricsSpeedLabel(lyricsSpeed.value);
+    }
+
+    const oldLyrics = el('lyrics-switch-old');
+    if (oldLyrics) {
+      oldLyrics.onclick = () => {
+        const old = lyricsAreOld();
+        const next = old ? 'new' : 'old';
+        MV.store.setProfile('lyricsMode', next);
+        MV.store.setProfile('wordSync', old);
+        applyLyricsModeSettings();
+        renderLyricsModeButtons();
+        toast(old ? 'New lyrics view enabled.' : 'Published lyrics view enabled.');
+      };
+    }
+
+    const wordSync = el('lyrics-word-sync');
+    if (wordSync) {
+      wordSync.onclick = () => {
+        const enabled = !lyricsAreOld() && MV.store.state.profile.wordSync !== false;
+        MV.store.setProfile('wordSync', !enabled);
+        if (!enabled && lyricsAreOld()) MV.store.setProfile('lyricsMode', 'new');
+        applyLyricsModeSettings();
+        renderLyricsModeButtons();
+        toast(enabled ? 'Word sync off.' : 'Word sync on.');
+      };
     }
 
     const spotifySave = el('spotify-save-client');
@@ -3859,8 +3936,30 @@
     const node = el('lyrics-speed-value');
     if (!node) return;
     const speed = Math.min(2.4, Math.max(0.6, Number(value) || 1));
-    const seconds = (0.9 / speed).toFixed(2).replace(/\.?0+$/, '') + 's';
-    node.textContent = speed.toFixed(1) + '× · ' + seconds + ' morph';
+    const seconds = (0.45 / speed).toFixed(2).replace(/\.?0+$/, '') + 's';
+    node.textContent = speed.toFixed(1) + '× · ' + seconds + ' fade';
+  }
+
+  function renderLyricsModeButtons() {
+    const profile = MV.store.state.profile;
+    const old = profile.lyricsMode === 'old';
+    const wordSync = profile.wordSync !== false && !old;
+    const oldButton = el('lyrics-switch-old');
+    const syncButton = el('lyrics-word-sync');
+    const status = el('lyrics-mode-status');
+
+    if (oldButton) {
+      oldButton.textContent = old ? 'Switch to new' : 'Switch to old';
+      oldButton.setAttribute('aria-pressed', String(old));
+    }
+    if (syncButton) {
+      syncButton.textContent = wordSync ? 'Off word sync' : 'On word sync';
+      syncButton.setAttribute('aria-pressed', String(wordSync));
+    }
+    if (status) {
+      status.textContent = (wordSync ? 'Word sync on' : 'Word sync off') +
+        ' · ' + (old ? 'Published view' : 'New view');
+    }
   }
 
   function renderAdvanced() {
@@ -3871,6 +3970,7 @@
     const speed = Number.isFinite(raw) && raw > 0 ? Math.min(2.4, Math.max(0.6, raw)) : 1;
     input.value = speed.toFixed(1);
     updateLyricsSpeedLabel(speed);
+    renderLyricsModeButtons();
     const crossfade = el('setting-crossfade-theme');
     if (crossfade) crossfade.checked = Boolean(MV.store.state.themeCrossfadeOnly);
     renderEqualizer();
@@ -4009,6 +4109,9 @@
     initTilt();
     initEvents();
     if (MV.lyrics) MV.lyrics.init();
+    if (MV.lyricsPublished) MV.lyricsPublished.init();
+    applyLyricsModeSettings();
+    renderLyricsModeButtons();
     if (MV.spotify && MV.spotify.onStatus) {
       MV.spotify.onStatus((status) => {
         renderAccount();

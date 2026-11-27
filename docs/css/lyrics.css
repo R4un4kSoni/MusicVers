@@ -1,35 +1,43 @@
 /* ============================================================
-   musicVer · interactive synced lyrics
-   Immersive, movement-free blur-in view. The active line is full
-   size; surrounding lines shrink and tilt through a perspective
-   "fish eye" tunnel so depth follows the music.
+   musicVer · cinematic word-synced lyrics
+
+   Big artwork. Narrower lyric room. Every word follows its own
+   timestamp. Only a line change stretches the row; word changes
+   fade smoothly between sizes and brightness.
    ============================================================ */
 
 .lyrics-view {
-  --lyrics-accent: #8b6cff;
-  --lyrics-ease: linear;
+  --lyrics-accent: #9b6cff;
+  --lyrics-morph: .45s;
+  --lyrics-ease: cubic-bezier(.22, .8, .28, 1);
   position: fixed;
   inset: 0;
   z-index: 110;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 12px;
-  padding: calc(22px + env(safe-area-inset-top, 0px)) clamp(18px, 5vw, 64px)
-    calc(20px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) clamp(18px, 4vw, 56px)
+    calc(18px + env(safe-area-inset-bottom, 0px));
   color: #fff;
-  background: #100e15;
+  background:
+    radial-gradient(ellipse at 6% 12%, rgba(122, 70, 190, .34), transparent 44%),
+    radial-gradient(ellipse at 94% 82%, rgba(182, 45, 70, .34), transparent 48%),
+    linear-gradient(135deg, #171126 0%, #211027 46%, #421524 100%);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: scale(1.015);
-  transition: opacity .3s ease, transform .3s var(--ease-out, ease), visibility .3s ease;
+  transition: opacity .34s ease, visibility .34s ease;
 }
 
 .lyrics-view.is-open {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
-  transform: none;
+}
+
+/* No hard borders in this view. Hover uses a soft shade instead. */
+.lyrics-view button,
+.lyrics-view [role="slider"],
+.flow-lyrics-open {
+  border-color: transparent !important;
 }
 
 .lyrics-bg,
@@ -42,69 +50,87 @@
 .lyrics-bg {
   background-position: center;
   background-size: cover;
-  filter: blur(72px) saturate(160%) brightness(.48);
-  transform: scale(1.25);
-  opacity: .9;
+  filter: blur(78px) saturate(135%) brightness(.5);
+  transform: scale(1.2);
+  opacity: .24;
 }
 
 .lyrics-veil {
   background:
-    radial-gradient(circle at 50% 40%, rgba(18, 16, 24, .08), rgba(9, 8, 13, .88) 74%),
-    linear-gradient(to bottom, rgba(9, 8, 13, .42), transparent 28%, transparent 72%, rgba(9, 8, 13, .7));
+    linear-gradient(90deg, rgba(10, 7, 17, .74), rgba(12, 8, 20, .34) 52%, rgba(10, 7, 17, .64)),
+    linear-gradient(to bottom, rgba(10, 7, 17, .42), transparent 24%, transparent 74%, rgba(10, 7, 17, .66));
 }
 
-.lyrics-head,
-.lyrics-stage,
-.lyrics-foot {
+.lyrics-shell {
   position: relative;
   z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(260px, 380px) minmax(0, 640px);
+  gap: clamp(28px, 4vw, 56px);
+  justify-content: center;
+  width: min(1180px, 100%);
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+}
+
+.lyrics-rail,
+.lyrics-pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lyrics-rail {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: clamp(16px, 2.6vh, 28px);
+}
+
+/* The lyric room stays narrow so the active word carries the focus. */
+.lyrics-pane {
+  width: 100%;
+  max-width: 640px;
+  gap: 10px;
 }
 
 .lyrics-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
+  flex: 0 0 auto;
 }
 
 .lyrics-kicker {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font: 700 9px/1 var(--font-ui, inherit);
   letter-spacing: .26em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, .58);
-  color: color-mix(in srgb, var(--lyrics-accent) 62%, white);
+  color: color-mix(in srgb, var(--lyrics-accent) 66%, white);
 }
 
-.lyrics-title {
+.lyrics-pane-title {
   margin: 0;
-  font: 600 clamp(18px, 2.2vw, 26px)/1.15 var(--font-display, Georgia, serif);
+  font: 600 clamp(19px, 2vw, 25px)/1.15 var(--font-display, Georgia, serif);
   letter-spacing: -.01em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.lyrics-artist {
-  margin: 5px 0 0;
-  font-size: 12px;
-  color: rgba(255, 255, 255, .58);
 }
 
 .lyrics-close {
   flex: 0 0 auto;
   width: 40px;
   height: 40px;
-  border: 1px solid rgba(255, 255, 255, .16);
   border-radius: 50%;
   background: rgba(255, 255, 255, .08);
   color: #fff;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background .2s ease, transform .2s ease;
+  transition: background .24s ease, transform .24s ease;
 }
 
 .lyrics-close:hover {
@@ -113,31 +139,27 @@
 }
 
 .lyrics-stage {
-  display: grid;
-  place-items: center;
+  flex: 1 1 auto;
   min-height: 0;
+  display: flex;
 }
 
 .lyrics-scroll {
-  width: min(760px, 100%);
+  width: 100%;
   height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: clamp(14px, 2.6vh, 30px);
-  padding: 0 12px;
+  align-items: stretch;
+  gap: clamp(10px, 1.8vh, 18px);
+  padding: 32vh clamp(2px, 1.5vw, 18px);
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
+  scroll-behavior: smooth;
   scrollbar-width: none;
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
-  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
-}
-
-.lyrics-scroll::before,
-.lyrics-scroll::after {
-  content: "";
-  flex: 0 0 42vh;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 13%, #000 87%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 13%, #000 87%, transparent);
 }
 
 .lyrics-scroll::-webkit-scrollbar { display: none; }
@@ -148,71 +170,146 @@
   border: 0;
   background: none;
   cursor: pointer;
-  color: #fff;
+  color: rgba(255, 255, 255, .4);
   max-width: 100%;
-  text-align: center;
-  font: 600 clamp(26px, 4vw, 46px)/1.28 var(--font-display, Georgia, serif);
-  letter-spacing: -.01em;
-  text-wrap: balance;
-  opacity: var(--lyric-opacity, .35);
-  filter: blur(var(--lyric-blur, 0px));
-  transform: perspective(760px) rotateX(var(--lyric-tilt, 0deg)) scale(var(--lyric-scale, 1));
-  transform-origin: center center;
+  margin-inline: -8px;
+  padding: 4px 8px;
+  border-radius: 14px;
+  text-align: left;
+  font: 500 clamp(21px, 2.4vw, 32px)/1.45 var(--font-display, Georgia, serif);
+  letter-spacing: -.015em;
+  text-wrap: pretty;
+  white-space: normal;
+  opacity: .5;
+  transform-origin: left center;
   transition:
-    opacity var(--lyrics-morph, .26s) var(--lyrics-ease),
-    filter var(--lyrics-morph, .26s) var(--lyrics-ease),
-    transform var(--lyrics-morph, .26s) var(--lyrics-ease),
-    color .25s ease;
-  will-change: transform, filter, opacity;
-  text-shadow: 0 10px 34px rgba(0, 0, 0, .6);
+    opacity var(--lyrics-morph) var(--lyrics-ease),
+    color var(--lyrics-morph) var(--lyrics-ease),
+    background var(--lyrics-morph) var(--lyrics-ease);
+  text-shadow: 0 8px 26px rgba(0, 0, 0, .44);
 }
 
-.lyric-line.is-past { color: rgba(255, 255, 255, .86); }
+.lyric-line__text { display: block; }
+
+.lyric-line.is-past {
+  opacity: .38;
+}
 
 .lyric-line.is-active {
   color: #fff;
-  font-weight: 700;
-  text-shadow: 0 0 34px rgba(160, 130, 255, .55), 0 12px 42px rgba(0, 0, 0, .66);
-  text-shadow:
-    0 0 34px color-mix(in srgb, var(--lyrics-accent) 55%, transparent),
-    0 12px 42px rgba(0, 0, 0, .66);
+  opacity: 1;
 }
 
-.lyric-line:hover {
-  opacity: .92 !important;
-  filter: blur(0) !important;
+/* Hover shade, never a hard outline. */
+.lyric-line:hover,
+.lyric-line:focus-visible {
+  background: linear-gradient(90deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04));
+  opacity: .92;
+}
+
+.lyric-line.is-active:hover,
+.lyric-line.is-active:focus-visible {
+  opacity: 1;
+}
+
+/* Only a line change gets this stretch. Words never animate this way. */
+.lyric-line.is-shifting {
+  animation: lyric-line-stretch .44s cubic-bezier(.22, .9, .3, 1);
+}
+
+@keyframes lyric-line-stretch {
+  0% { transform: scaleY(.86) scaleX(.99); }
+  52% { transform: scaleY(1.08) scaleX(1.01); }
+  100% { transform: scaleY(1) scaleX(1); }
+}
+
+.lyric-word {
+  display: inline;
+  color: rgba(255, 255, 255, .52);
+  font-size: .78em;
+  font-weight: 500;
+  opacity: .62;
+  filter: blur(.7px);
+  transition:
+    color var(--lyrics-morph) var(--lyrics-ease),
+    font-size var(--lyrics-morph) var(--lyrics-ease),
+    font-weight var(--lyrics-morph) var(--lyrics-ease),
+    opacity var(--lyrics-morph) var(--lyrics-ease),
+    filter var(--lyrics-morph) var(--lyrics-ease),
+    text-shadow var(--lyrics-morph) var(--lyrics-ease);
+}
+
+.lyric-word.is-word-past {
+  color: rgba(255, 255, 255, .72);
+  font-size: .82em;
+  opacity: .78;
+  filter: blur(.35px);
+}
+
+.lyric-word.is-word-active {
+  color: #fff;
+  font-size: 1.22em;
+  font-weight: 800;
+  opacity: 1;
+  filter: none;
+  text-shadow:
+    0 0 34px color-mix(in srgb, var(--lyrics-accent) 46%, transparent),
+    0 8px 24px rgba(0, 0, 0, .6);
 }
 
 .lyrics-empty {
-  margin: 0;
-  font-size: 14px;
-  color: rgba(255, 255, 255, .6);
-  text-align: center;
-}
-
-.lyrics-foot {
-  display: grid;
-  gap: 12px;
-  justify-items: center;
-  width: min(760px, 100%);
-  margin: 0 auto;
+  margin: auto 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, .62);
+  text-align: left;
 }
 
 .lyrics-source {
+  flex: 0 0 auto;
   margin: 0;
+  min-height: 14px;
   font-size: 10px;
-  letter-spacing: .08em;
-  color: rgba(255, 255, 255, .48);
-  text-align: center;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .44);
+}
+
+.lyrics-art {
+  width: min(100%, 380px);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  border-radius: 30px;
+  background-position: center;
+  background-size: cover;
+  background-color: rgba(255, 255, 255, .07);
+  box-shadow: 0 30px 72px rgba(0, 0, 0, .5);
+}
+
+.lyrics-meta { width: 100%; }
+
+.lyrics-title {
+  margin: 0;
+  font: 400 clamp(24px, 2.6vw, 34px)/1.18 var(--font-display, Georgia, serif);
+  letter-spacing: -.015em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lyrics-artist {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, .66);
 }
 
 .lyrics-progress {
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
+  gap: 10px;
+  width: min(100%, 380px);
   font-size: 10px;
-  color: rgba(255, 255, 255, .62);
+  color: rgba(255, 255, 255, .66);
 }
 
 .lyrics-progress__bar {
@@ -220,8 +317,13 @@
   flex: 1;
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .2);
+  background: rgba(255, 255, 255, .18);
   cursor: pointer;
+  transition: background .24s ease;
+}
+
+.lyrics-progress__bar:hover {
+  background: rgba(255, 255, 255, .34);
 }
 
 .lyrics-progress__bar > span {
@@ -229,7 +331,7 @@
   height: 100%;
   width: 0;
   border-radius: inherit;
-  background: var(--lyrics-accent);
+  background: #fff;
 }
 
 .lyrics-progress__bar i {
@@ -247,31 +349,49 @@
 
 .lyrics-progress__bar:hover i { opacity: 1; }
 
+/* Controls share the bar's width and are centred on it. */
 .lyrics-controls {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 26px;
+  gap: 22px;
+  width: min(100%, 380px);
 }
 
 .lyrics-controls button {
-  color: rgba(255, 255, 255, .78);
-  font-size: 20px;
-  transition: transform .22s var(--ease-out, ease), color .2s ease;
-}
-
-.lyrics-controls button:hover { transform: scale(1.14); color: #fff; }
-
-.lyrics-play {
-  width: 52px;
-  height: 52px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: #fff;
-  color: #14121a !important;
-  font-size: 18px !important;
+  background: transparent;
+  color: rgba(255, 255, 255, .8);
+  font-size: 20px;
   display: grid;
   place-items: center;
+  cursor: pointer;
+  transition:
+    transform .22s var(--ease-out, ease),
+    color .2s ease,
+    background .24s ease;
+}
+
+.lyrics-controls button:hover {
+  transform: scale(1.08);
+  color: #fff;
+  background: rgba(255, 255, 255, .12);
+}
+
+.lyrics-play {
+  width: 52px !important;
+  height: 52px !important;
+  background: #fff !important;
+  color: #18121f !important;
+  font-size: 18px !important;
   box-shadow: 0 12px 32px rgba(0, 0, 0, .36);
+}
+
+.lyrics-play:hover {
+  background: #f4eaff !important;
+  color: #18121f !important;
 }
 
 .flow-lyrics-open {
@@ -279,7 +399,6 @@
   width: fit-content;
   margin: 12px auto 0;
   padding: 8px 15px;
-  border: 1px solid rgba(255, 255, 255, .22);
   border-radius: 999px;
   background: rgba(255, 255, 255, .08);
   color: rgba(255, 255, 255, .86);
@@ -287,16 +406,15 @@
   font-weight: 600;
   letter-spacing: .06em;
   cursor: pointer;
-  transition: background .2s ease, color .2s ease;
+  transition: background .24s ease, color .24s ease;
 }
 
 .flow-lyrics-open:hover {
-  background: var(--lyrics-accent, var(--accent, #8b6cff));
-  color: #14121a;
+  background: rgba(255, 255, 255, .2);
+  color: #fff;
 }
 
-/* Microphone control in the player. The small bars dance only while the
-   current track is playing, so the button always signals the lyrics view. */
+/* Microphone control in the player. */
 .control--lyrics {
   display: grid;
   place-items: center;
@@ -331,22 +449,148 @@
   to { transform: scaleY(1); opacity: 1; }
 }
 
-@media (max-width: 720px) {
-  .lyrics-view { gap: 8px; padding-left: 18px; padding-right: 18px; }
-  .lyrics-title { font-size: 18px; }
-  .lyrics-scroll { gap: 18px; }
-  .lyrics-scroll::before,
-  .lyrics-scroll::after { flex-basis: 40vh; }
-  .lyric-line { font-size: clamp(24px, 7vw, 34px); }
-  .lyrics-close { width: 38px; height: 38px; }
-  .lyrics-controls { gap: 22px; }
-  .lyrics-play { width: 48px; height: 48px; }
+:root[data-theme="light"] .lyrics-view {
+  background:
+    radial-gradient(ellipse at 6% 12%, rgba(126, 78, 190, .3), transparent 44%),
+    radial-gradient(ellipse at 94% 82%, rgba(186, 52, 78, .3), transparent 48%),
+    linear-gradient(135deg, #211631 0%, #2d152f 46%, #511a2b 100%);
+}
+
+:root[data-theme="light"] .lyrics-veil {
+  background:
+    linear-gradient(90deg, rgba(10, 7, 17, .7), rgba(12, 8, 20, .3) 52%, rgba(10, 7, 17, .62)),
+    linear-gradient(to bottom, rgba(10, 7, 17, .36), transparent 24%, transparent 74%, rgba(10, 7, 17, .6));
+}
+
+@media (max-width: 980px) {
+  .lyrics-view { padding-left: 16px; padding-right: 16px; }
+  .lyrics-shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .lyrics-rail {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    text-align: left;
+    gap: 12px 18px;
+  }
+  .lyrics-art { width: 132px; border-radius: 22px; }
+  .lyrics-meta { flex: 1 1 160px; }
+  .lyrics-title { font-size: 21px; }
+  .lyrics-artist { margin-top: 4px; font-size: 12px; }
+  .lyrics-progress, .lyrics-controls { width: 100%; max-width: none; }
+  .lyrics-controls { gap: 18px; }
+  .lyrics-play { width: 46px !important; height: 46px !important; }
+  .lyrics-pane { max-width: none; }
+  .lyrics-scroll { padding: 30vh 2px; }
+  .lyric-line { font-size: clamp(21px, 5.6vw, 30px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lyrics-view,
   .lyric-line,
-  .lyrics-close,
-  .lyrics-progress__bar i { transition: none; }
+  .lyric-word,
+  .lyrics-progress__bar,
+  .lyrics-controls button { transition: none; }
+  .lyrics-scroll { scroll-behavior: auto; }
+  .lyric-line.is-shifting { animation: none; }
   .control--lyrics.is-playing .mic-wave { animation: none; }
+}
+
+/* Old view / word sync off: the full line is the highlight again. */
+.lyrics-view.is-old .lyric-word,
+.lyrics-view.is-word-off .lyric-word {
+  color: inherit;
+  font-size: 1em;
+  font-weight: inherit;
+  opacity: 1;
+  filter: none;
+  text-shadow: none;
+}
+
+.lyrics-view.is-old .lyric-line,
+.lyrics-view.is-word-off .lyric-line {
+  font-size: clamp(24px, 3vw, 40px);
+  opacity: .5;
+}
+
+.lyrics-view.is-old .lyric-line.is-active,
+.lyrics-view.is-word-off .lyric-line.is-active {
+  color: #fff;
+  opacity: 1;
+  font-weight: 750;
+  text-shadow: 0 8px 26px rgba(0, 0, 0, .5);
+}
+
+.lyrics-view.is-old .lyrics-art {
+  width: min(100%, 292px);
+}
+
+/* Advanced settings action row. */
+.setting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.setting-actions .btn {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 11px;
+}
+
+/* ============================================================
+   App-wide soft surfaces
+
+   No hard borders anywhere: existing lines are made transparent
+   without changing layout. Hovering any clickable surface lays a
+   thin shade over it instead of drawing an outline.
+   ============================================================ */
+
+:root { --hover-shade: rgba(24, 16, 34, .07); }
+:root[data-theme="dark"] { --hover-shade: rgba(255, 255, 255, .075); }
+
+*,
+*::before,
+*::after {
+  border-color: transparent !important;
+}
+
+:is(
+  a:hover,
+  button:hover,
+  input:hover,
+  select:hover,
+  textarea:hover,
+  label:hover,
+  [role="button"]:hover,
+  [role="slider"]:hover,
+  [tabindex]:hover,
+  .account-card:hover,
+  .media-card:hover,
+  .recent-tile:hover,
+  .recent-item:hover,
+  .song-row:hover,
+  .mini-tile:hover,
+  .playlist-card:hover,
+  .genre-card:hover,
+  .lib-tile:hover,
+  .artist-row:hover,
+  .queue-item:hover,
+  .queue-now:hover,
+  .flow-card:hover,
+  .chip:hover,
+  .library-tab:hover,
+  .island-tab:hover,
+  .top-menu__item:hover,
+  .spotify-import-item:hover,
+  .top-result:hover,
+  .mg-card:hover,
+  .mg-step:hover,
+  .modal-card:hover,
+  .setting-row:hover
+) {
+  box-shadow: inset 0 0 0 999px var(--hover-shade);
 }

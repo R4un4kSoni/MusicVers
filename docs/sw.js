@@ -1,5 +1,5 @@
 /* musicVer app shell service worker. Network-first for page assets, never intercepts API calls. */
-const CACHE = 'musicver-shell-v1181';
+const CACHE = 'musicver-shell-v1190';
 const SHELL = [
   './',
   './index.html',

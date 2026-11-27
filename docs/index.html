@@ -14,12 +14,13 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="css/base.css?v=1181">
-  <link rel="stylesheet" href="css/layout.css?v=1181">
-  <link rel="stylesheet" href="css/components.css?v=1181">
-  <link rel="stylesheet" href="css/web.css?v=1181">
-  <link rel="stylesheet" href="css/mobile-redesign.css?v=1181">
-  <link rel="stylesheet" href="css/lyrics.css?v=1181">
+  <link rel="stylesheet" href="css/base.css?v=1190">
+  <link rel="stylesheet" href="css/layout.css?v=1190">
+  <link rel="stylesheet" href="css/components.css?v=1190">
+  <link rel="stylesheet" href="css/web.css?v=1190">
+  <link rel="stylesheet" href="css/mobile-redesign.css?v=1190">
+  <link rel="stylesheet" href="css/lyrics.css?v=1190">
+  <link rel="stylesheet" href="css/lyrics-published.css?v=1190" id="lyrics-published-css" disabled>
 </head>
 
 <body>
@@ -79,7 +80,7 @@
             </span>
             <span class="island-tab__label">Stats</span>
           </button>
-          <button class="island-tab" data-nav="account" title="Account">
+          <button accesskey="a" class="island-tab" data-nav="account" title="Account">
             <span class="island-tab__icon" aria-hidden="true">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="4" /><path d="M4.5 20c.6-4 3.5-6 7.5-6s6.9 2 7.5 6" /></svg>
             </span>
@@ -177,7 +178,7 @@
             <button class="home-action home-action--liked" data-library-tab="liked" aria-label="Open liked songs">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.3 4.7 13a4.6 4.6 0 0 1 6.5-6.5l.8.8.8-.8A4.6 4.6 0 0 1 19.3 13z" /></svg>
             </button>
-            <button class="home-action home-action--search" id="home-search" aria-label="Search music">
+            <button accesskey="d" class="home-action home-action--search" id="home-search" aria-label="Search music">
               <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4" /><path d="m15.6 15.6 4.6 4.6" /></svg>
             </button>
           </header>
@@ -845,17 +846,22 @@
           <div class="account-grid">
             <div class="account-card">
               <p class="eyebrow">LYRICS</p>
-              <h3>Lyrics switch speed</h3>
-              <p class="field-note">Choose how quickly the focus moves onto the next line near the end of the current one. Move right for a faster switch.</p>
+              <h3>Word fade speed</h3>
+              <p class="field-note">Choose how smoothly the active word changes. Move right for a quicker fade.</p>
               <div class="setting-range">
-                <label class="field-label" for="setting-lyrics-speed">Switch speed</label>
+                <label class="field-label" for="setting-lyrics-speed">Word fade</label>
                 <div class="setting-range__row">
                   <span>Slow</span>
                   <input type="range" id="setting-lyrics-speed" min="0.6" max="2.4" step="0.1" value="1" aria-describedby="lyrics-speed-value">
                   <span>Fast</span>
                 </div>
-                <p class="setting-range__value" id="lyrics-speed-value">1.0× · 0.9s morph</p>
+                <p class="setting-range__value" id="lyrics-speed-value">1.0× · 0.45s fade</p>
               </div>
+              <div class="setting-actions">
+                <button type="button" class="btn btn--outline" id="lyrics-switch-old" aria-pressed="false">Switch to old</button>
+                <button type="button" class="btn btn--outline" id="lyrics-word-sync" aria-pressed="true">Off word sync</button>
+              </div>
+              <p class="setting-range__value" id="lyrics-mode-status">Word sync on · New view</p>
             </div>
 
             <div class="account-card">
@@ -954,10 +960,10 @@
 
       <div class="player-center">
         <div class="player-controls">
-          <button class="control" id="shuffle" aria-label="Shuffle" title="Shuffle"><span class="app-icon app-icon--shuffle" aria-hidden="true"></span></button>
-          <button class="control" id="previous" aria-label="Previous" title="Previous"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
+          <button class="control" accesskey="s" id="shuffle" aria-label="Shuffle" title="Shuffle"><span class="app-icon app-icon--shuffle" aria-hidden="true"></span></button>
+          <button class="control" accesskey="f" id="previous" aria-label="Previous" title="Previous"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
           <button class="play-main" id="main-play" aria-label="Play" title="Play / pause"><span class="app-icon app-icon--play" aria-hidden="true"></span></button>
-          <button class="control" id="next" aria-label="Next" title="Next"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
+          <button class="control" accesskey="j" id="next" aria-label="Next" title="Next"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
           <button class="control control--add" id="player-add" aria-label="Add current song to playlist" title="Add current song to playlist"><span class="app-icon app-icon--plus-hexagon" aria-hidden="true"></span></button>
           <button class="control control--radio" id="player-radio" aria-label="Open song radio" title="Song radio"><span class="app-icon app-icon--radio-alt" aria-hidden="true"></span></button>
         </div>
@@ -1055,32 +1061,73 @@
 
     <!-- ============ interactive lyrics ============ -->
     <div class="lyrics-view" id="lyrics-view" aria-hidden="true" role="dialog" aria-label="Lyrics">
-      <div class="lyrics-bg" id="lyrics-cover" aria-hidden="true"></div>
+      <div class="lyrics-bg" id="lyrics-bg" aria-hidden="true"></div>
+      <div class="lyrics-veil" aria-hidden="true"></div>
+
+      <div class="lyrics-shell">
+        <aside class="lyrics-rail" aria-label="Now playing">
+          <div class="lyrics-art" id="lyrics-cover" aria-hidden="true"></div>
+          <div class="lyrics-meta">
+            <h3 class="lyrics-title" id="lyrics-title">Nothing playing</h3>
+            <p class="lyrics-artist" id="lyrics-artist">Choose a song to begin</p>
+          </div>
+          <div class="lyrics-progress">
+            <span id="lyrics-elapsed">0:00</span>
+            <div class="lyrics-progress__bar" id="lyrics-progress" role="slider" aria-label="Seek" tabindex="0">
+              <span id="lyrics-progress-fill"></span><i id="lyrics-progress-knob"></i>
+            </div>
+            <span id="lyrics-total">0:00</span>
+          </div>
+          <div class="lyrics-controls">
+            <button id="lyrics-prev" aria-label="Previous song" title="Previous"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
+            <button class="lyrics-play" id="lyrics-play" aria-label="Play or pause" title="Play or pause"><span class="app-icon app-icon--play" aria-hidden="true"></span></button>
+            <button id="lyrics-next" aria-label="Next song" title="Next"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
+          </div>
+        </aside>
+
+        <section class="lyrics-pane" aria-label="Synced lyrics">
+          <header class="lyrics-head">
+            <div>
+              <h2 class="lyrics-pane-title">Sing along</h2>
+            </div>
+            <button class="lyrics-close" id="lyrics-close" aria-label="Close lyrics" title="Close lyrics"><span class="app-icon app-icon--cross-circle" aria-hidden="true"></span></button>
+          </header>
+          <div class="lyrics-stage">
+            <div class="lyrics-scroll" id="lyrics-lines" tabindex="0" aria-label="Lyrics, tap a line to jump there"></div>
+          </div>
+          <p class="lyrics-source" id="lyrics-source"></p>
+        </section>
+      </div>
+    </div>
+
+    <!-- ============ published lyrics (legacy switch) ============ -->
+    <div class="lyrics-view lyrics-view--published" id="lyrics-view-published" aria-hidden="true" role="dialog" aria-label="Published lyrics">
+      <div class="lyrics-bg" id="lyrics-cover-published" aria-hidden="true"></div>
       <div class="lyrics-veil" aria-hidden="true"></div>
       <header class="lyrics-head">
         <div>
           <p class="lyrics-kicker">LYRICS · SING ALONG</p>
-          <h2 class="lyrics-title" id="lyrics-title">Nothing playing</h2>
-          <p class="lyrics-artist" id="lyrics-artist">Choose a song to begin</p>
+          <h2 class="lyrics-title" id="lyrics-title-published">Nothing playing</h2>
+          <p class="lyrics-artist" id="lyrics-artist-published">Choose a song to begin</p>
         </div>
-        <button class="lyrics-close" id="lyrics-close" aria-label="Close lyrics" title="Close lyrics"><span class="app-icon app-icon--cross-circle" aria-hidden="true"></span></button>
+        <button class="lyrics-close" id="lyrics-close-published" aria-label="Close published lyrics" title="Close lyrics"><span class="app-icon app-icon--cross-circle" aria-hidden="true"></span></button>
       </header>
       <div class="lyrics-stage">
-        <div class="lyrics-scroll" id="lyrics-lines" tabindex="0" aria-label="Lyrics, tap a line to jump there"></div>
+        <div class="lyrics-scroll" id="lyrics-lines-published" tabindex="0" aria-label="Lyrics, tap a line to jump there"></div>
       </div>
       <footer class="lyrics-foot">
-        <p class="lyrics-source" id="lyrics-source"></p>
+        <p class="lyrics-source" id="lyrics-source-published"></p>
         <div class="lyrics-progress">
-          <span id="lyrics-elapsed">0:00</span>
-          <div class="lyrics-progress__bar" id="lyrics-progress" role="slider" aria-label="Seek" tabindex="0">
-            <span id="lyrics-progress-fill"></span><i id="lyrics-progress-knob"></i>
+          <span id="lyrics-elapsed-published">0:00</span>
+          <div class="lyrics-progress__bar" id="lyrics-progress-published" role="slider" aria-label="Seek" tabindex="0">
+            <span id="lyrics-progress-fill-published"></span><i id="lyrics-progress-knob-published"></i>
           </div>
-          <span id="lyrics-total">0:00</span>
+          <span id="lyrics-total-published">0:00</span>
         </div>
         <div class="lyrics-controls">
-          <button id="lyrics-prev" aria-label="Previous song" title="Previous"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
-          <button class="lyrics-play" id="lyrics-play" aria-label="Play or pause" title="Play or pause"><span class="app-icon app-icon--play" aria-hidden="true"></span></button>
-          <button id="lyrics-next" aria-label="Next song" title="Next"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
+          <button id="lyrics-prev-published" aria-label="Previous song" title="Previous"><span class="app-icon app-icon--angle-left" aria-hidden="true"></span></button>
+          <button class="lyrics-play" id="lyrics-play-published" aria-label="Play or pause" title="Play or pause"><span class="app-icon app-icon--play" aria-hidden="true"></span></button>
+          <button id="lyrics-next-published" aria-label="Next song" title="Next"><span class="app-icon app-icon--angle-right" aria-hidden="true"></span></button>
         </div>
       </footer>
     </div>
@@ -1091,19 +1138,20 @@
     <div class="toast-root" id="toast-root" aria-live="polite"></div>
   </div>
 
-  <script src="js/data.js?v=1181"></script>
-  <script src="js/artwork.js?v=1181"></script>
-  <script src="js/store.js?v=1181"></script>
-  <script src="js/web-seed.js?v=1181"></script>
-  <script src="js/web-jio-catalog.js?v=1181"></script>
-  <script src="js/spotify.js?v=1181"></script>
-  <script src="js/musicatlas.js?v=1181"></script>
-  <script src="js/web-api.js?v=1181"></script>
-  <script src="js/api.js?v=1181"></script>
-  <script src="js/player.js?v=1181"></script>
-  <script src="js/lyrics.js?v=1181"></script>
-  <script src="js/ui.js?v=1181"></script>
-  <script src="js/app.js?v=1181"></script>
+  <script src="js/data.js?v=1190"></script>
+  <script src="js/artwork.js?v=1190"></script>
+  <script src="js/store.js?v=1190"></script>
+  <script src="js/web-seed.js?v=1190"></script>
+  <script src="js/web-jio-catalog.js?v=1190"></script>
+  <script src="js/spotify.js?v=1190"></script>
+  <script src="js/musicatlas.js?v=1190"></script>
+  <script src="js/web-api.js?v=1190"></script>
+  <script src="js/api.js?v=1190"></script>
+  <script src="js/player.js?v=1190"></script>
+  <script src="js/lyrics.js?v=1190"></script>
+  <script src="js/lyrics-published.js?v=1190"></script>
+  <script src="js/ui.js?v=1190"></script>
+  <script src="js/app.js?v=1190"></script>
 </body>
 
 </html>

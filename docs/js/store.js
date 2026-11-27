@@ -15,7 +15,9 @@
       flowAuto: false,
       ambience: true,
       rememberSearches: true,
-      lyricsSwitchSpeed: 1
+      lyricsSwitchSpeed: 1,
+      lyricsMode: 'new',
+      wordSync: true
     },
     liked: [],
     savedAlbums: [],
